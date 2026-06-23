@@ -1,0 +1,41 @@
+# Changelog
+
+Todos los cambios notables del proyecto se documentan en este archivo.
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
+versionamiento [SemVer](https://semver.org/lang/es/).
+
+## [1.1.0] - 2026-06-23
+
+### Added
+- **Informe para termohigrómetros**: toggle Presión / Termohigrómetro en `/informe`.
+  Variante STH con KPIs de temperatura y humedad, estado general (peor de ambas métricas),
+  4 alarmas con histéresis (T° y humedad, alta/baja) y estadísticas por métrica.
+- Componentes reutilizables del informe (`components/report/*`: `DpReport`, `SthReport`,
+  controles y piezas compartidas).
+
+### Fixed
+- **Bandas/límites de rango ahora visibles en los gráficos** (antes quedaban fuera de pantalla):
+  - Termohigrómetros: eje Y único con `min:0` y máximo dinámico (como la página original);
+    temperatura en verde y humedad en azul (colores distintos); líneas de rango siempre visibles.
+  - Informe de presión: se quitó el zoom y el relleno verde que tapaba todo; líneas de límite
+    mín/máx visibles y etiqueta de promedio sin recorte.
+
+## [1.0.0] - 2026-06-22
+
+### Added
+- Proyecto inicial **Monitoreo · Knop Laboratorios** (Next.js 16 + TypeScript + Tailwind v4).
+- Sistema de diseño on-brand (paleta verde Knop, tipografía con cifras tabulares, iconos Lucide).
+- Capa de datos: proxy `/api/knop/{devices,kpi,rango}` que consume y normaliza las APIs
+  del cliente (`deviceDP/kpiDP/rangoDP` y `device/kpiSTH/rangoSTH`).
+- Página `/monitoreo/sdp` — Diferencial de Presión: selector de sensor, periodos (24h–12m),
+  rango de fechas, gráfico ECharts con líneas de rango, conversión inH₂O, exportación Excel,
+  auto-refresh 60 s.
+- Página `/monitoreo/termohigrometros` — temperatura + humedad con doble eje y rangos de aceptación.
+- Página `/informe` — informe estadístico: estado general, KPIs, % cumplimiento, tiempo fuera
+  de rango, alarmas con histéresis, estadísticas e información del sensor; exportación a PDF (impresión).
+- Utilidades: `lib/units` (Pa↔inH₂O, formato), `lib/aggregation` (preset→agg),
+  `lib/stats` (resumen, cumplimiento, tendencia, histéresis), `lib/exportXlsx`.
+
+### Notes
+- Datos consumidos con autorización del cliente (Knop). El proxy desacopla la UI del
+  proveedor actual y permite migrar a backend propio en el futuro.

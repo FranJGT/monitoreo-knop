@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Monitoreo · Knop Laboratorios
 
-## Getting Started
+Plataforma web de monitoreo ambiental para áreas controladas de **Knop Laboratorios**:
+réplica de alta calidad de las páginas de monitoreo del proveedor + un **informe
+estadístico** que antes no existía.
 
-First, run the development server:
+Construido con **Next.js 16 (App Router) + TypeScript + Tailwind v4**, gráficos con
+**ECharts**, desplegable en **Vercel**.
+
+## Vistas
+
+| Ruta | Descripción |
+|------|-------------|
+| `/` | Inicio / acceso a las tres vistas |
+| `/monitoreo/sdp` | **Diferencial de Presión** (Pa / inH₂O) con rango operacional y exportación a Excel |
+| `/monitoreo/termohigrometros` | **Termohigrómetros** (temperatura + humedad, doble eje) con rangos de aceptación |
+| `/informe` | **Informe estadístico**: estado general, KPIs, cumplimiento, tiempo fuera de rango, alarmas con histéresis, exportación a PDF |
+
+## Datos
+
+Los datos provienen de las APIs públicas del sistema del cliente
+(`newenergy.softronica.cl/knop/monitoreo/`, sensores LoRaWAN). La app no llama esas APIs
+directamente desde el navegador: un **proxy en Next.js** (`/api/knop/*`) las consume,
+normaliza tipos y aplica caché.
+
+- `deviceDP.php` / `device.php` → lista de sensores
+- `kpiDP.php` / `kpiSTH.php` → series temporales agregadas
+- `rangoDP.php` / `rangoSTH.php` → rangos operacionales
+
+Detalle en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
+
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # build de producción
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Identidad visual
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sistema de diseño anclado en la marca real de Knop (verdes corporativos `#09612D` /
+`#5FE500`), tipografía con cifras tabulares, iconografía de línea (Lucide). Tokens en
+[app/globals.css](app/globals.css).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estructura
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/                  rutas (UI + /api/knop proxy)
+components/           UI compartida (toolbar, charts, KPIs, header)
+lib/                  cliente de datos, estadística, unidades, opciones de gráficos
+public/brand/         logotipo de Knop
+docs/                 documentación
+```

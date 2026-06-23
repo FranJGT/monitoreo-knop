@@ -1,26 +1,180 @@
 @import "tailwindcss";
 
+/* ===========================================================================
+   Sistema de diseño — Knop Laboratorios · Monitoreo
+   Paleta anclada en la marca real (knoplabs.com): verdes corporativos.
+   =========================================================================== */
+@theme {
+  /* Marca — escala de verdes derivada del verde corporativo #09612D */
+  --color-brand-50: #eef6f0;
+  --color-brand-100: #d7ebdd;
+  --color-brand-200: #aed8bc;
+  --color-brand-300: #7cbf94;
+  --color-brand-400: #46a06a;
+  --color-brand-500: #1f8049;
+  --color-brand-600: #0f6f3a;
+  --color-brand-700: #09612d; /* primario */
+  --color-brand-800: #074a24;
+  --color-brand-900: #00210a; /* casi negro */
+
+  /* Acento lima (uso puntual, < 5%) */
+  --color-lime: #5fe500;
+  --color-lime-soft: #c7f99a;
+
+  /* Superficies y neutros fríos */
+  --color-canvas: #f3f6f3;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8faf8;
+  --color-line: #e3eae5;
+  --color-line-strong: #cdd8d0;
+  --color-ink: #0f1c14;
+  --color-muted: #5b6b61;
+  --color-faint: #8a988f;
+
+  /* Estados operacionales */
+  --color-ok: #16a34a;
+  --color-ok-soft: #dcfce7;
+  --color-warn: #d4a017;
+  --color-warn-soft: #fdf3d6;
+  --color-alert: #dc2626;
+  --color-alert-soft: #fde2e2;
+  --color-info: #0e7490;
+
+  /* Tipografía */
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* Radios y sombras coherentes */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --shadow-card: 0 1px 2px rgba(15, 28, 20, 0.04),
+    0 12px 32px -12px rgba(15, 28, 20, 0.12);
+  --shadow-pop: 0 24px 60px -20px rgba(15, 28, 20, 0.28);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1200px 480px at 100% -10%, rgba(9, 97, 45, 0.06), transparent 60%),
+    radial-gradient(900px 420px at -10% 0%, rgba(95, 229, 0, 0.05), transparent 55%),
+    var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Cifras tabulares para todo dato numérico */
+.tnum,
+[data-num] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Scrollbar discreto y on-brand */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  border: 3px solid var(--color-canvas);
+}
+
+/* Foco accesible coherente */
+:where(a, button, select, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Utilidad de superficie */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* Animación de carga sobria (sin spinners llamativos) */
+@keyframes knop-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(15, 28, 20, 0.05),
+    transparent
+  );
+  animation: knop-shimmer 1.4s infinite;
+}
+
+/* react-day-picker (rango de fechas) — tema Knop */
+.rdp-root {
+  --rdp-accent-color: var(--color-brand-700);
+  --rdp-accent-background-color: var(--color-brand-50);
+  --rdp-today-color: var(--color-brand-700);
+  --rdp-day-width: 38px;
+  --rdp-day-height: 38px;
+  --rdp-day_button-width: 38px;
+  --rdp-day_button-height: 38px;
+  font-size: 14px;
+}
+
+/* Impresión: el informe se exporta a PDF con calidad */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Mantener tarjetas legibles y evitar cortes feos */
+  .card {
+    box-shadow: none !important;
+    border-color: #d6e0d9 !important;
+    break-inside: avoid;
+  }
+  .print-break {
+    break-after: page;
+  }
 }
