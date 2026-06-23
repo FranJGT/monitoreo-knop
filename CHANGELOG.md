@@ -4,6 +4,18 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [1.1.1] - 2026-06-23
+
+### Fixed
+- **Colisión de caché en producción (Netlify)**: el CDN cacheaba las respuestas de
+  `/api/knop/*` por ruta ignorando el query string, lo que hacía que distintos sensores
+  o tipos (DP/STH) devolvieran los datos del primero cacheado. Las rutas del proxy ahora
+  responden `Cache-Control: no-store` (el upstream sigue cacheado server-side vía `revalidate`).
+
+### Deployed
+- Sitio en producción en Netlify (Next.js Runtime): https://superlative-truffle-37d616.netlify.app
+  Repositorio: https://github.com/FranJGT/monitoreo-knop (auto-deploy en cada push a `main`).
+
 ## [1.1.0] - 2026-06-23
 
 ### Added
