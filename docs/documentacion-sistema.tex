@@ -1,0 +1,252 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------------
+%  Documentación técnica \textemdash{} Plataforma de Monitoreo Knop Laboratorios
+% ------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage[spanish,es-noindentfirst]{babel}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{knopgreen}{HTML}{09612D}
+\definecolor{knopink}{HTML}{0F1C14}
+\definecolor{codebg}{HTML}{F4F7F4}
+
+\titleformat{\section}{\Large\bfseries\color{knopgreen}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{knopink}}{\thesubsection}{0.6em}{}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{knopgreen}{\textbf{Knop Laboratorios}} · Monitoreo ambiental}
+\rhead{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\vspace{-1.2cm}\textbf{\textcolor{knopgreen}{Plataforma de Monitoreo Ambiental}}\\[2pt]
+\large Documentación técnica del sistema}
+\author{Knop Laboratorios \textemdash{} Ingeniería y Mantención}
+\date{Junio 2026 · v1.1.1}
+
+\begin{document}
+\shorthandoff{"<>}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent Este documento describe la plataforma web de monitoreo ambiental construida para
+Knop Laboratorios: su arquitectura, qué datos entrega la API del proveedor (sensores LoRaWAN
+de diferencial de presión y termohigrómetros), qué información extraemos y calculamos, y qué
+funcionalidades ofrece hoy y puede ofrecer a futuro.
+\end{abstract}
+
+\tableofcontents
+\vspace{0.6cm}
+
+% ==================================================================
+\section{Cómo funciona el sistema}
+% ==================================================================
+
+La plataforma es una aplicación web (Next.js + TypeScript, desplegada en Netlify) que
+\textbf{no almacena datos propios}: consume en vivo las API del sistema de monitoreo del
+proveedor (Softronica) sobre los sensores instalados en las áreas controladas de Knop.
+
+\subsection{Flujo de datos}
+
+\begin{enumerate}[leftmargin=1.4em]
+  \item El \textbf{navegador} (interfaz React) solicita datos a nuestras rutas internas
+        \code{/api/knop/*}.
+  \item Esas rutas actúan como \textbf{proxy}: en el servidor consultan la API del proveedor,
+        \textbf{normalizan} los tipos (números, fechas, codificación UTF-8) y devuelven JSON limpio.
+  \item La API del proveedor (\code{PHP}) lee la base de datos alimentada por los
+        \textbf{sensores LoRaWAN} y responde en JSON.
+\end{enumerate}
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{\centering
+Navegador (React) \;$\rightarrow$\; \code{/api/knop/*} (proxy + normalización)
+\;$\rightarrow$\; API PHP del proveedor \;$\rightarrow$\; Sensores LoRaWAN
+}}
+\end{center}
+
+\subsection{¿Por qué un proxy?}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Tipado y limpieza}: la API original entrega números como texto y con codificación
+        variable; el proxy los normaliza.
+  \item \textbf{Desacople}: si en el futuro Knop cambia de proveedor o monta su propio backend,
+        solo cambia el proxy, no la interfaz.
+  \item \textbf{Control de caché}: evita que datos de un sensor se mezclen con otro
+        (ver Sección~\ref{sec:notas}).
+\end{itemize}
+
+\subsection{Vistas de la aplicación}
+\begin{center}
+\begin{tabular}{@{}p{4.6cm}p{9.8cm}@{}}
+\toprule
+\textbf{Ruta} & \textbf{Descripción} \\
+\midrule
+\code{/} & Inicio / acceso a las vistas. \\
+\code{/monitoreo/sdp} & Diferencial de presión (Pa / inH$_2$O) con rango operacional. \\
+\code{/monitoreo/termohigrometros} & Temperatura y humedad con rangos de aceptación. \\
+\code{/informe} & Informe estadístico (presión \emph{o} termohigrómetro). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ==================================================================
+\section{Qué entrega la API del proveedor}
+% ==================================================================
+
+Base: \code{https://newenergy.softronica.cl/knop/monitoreo/}. Todos los endpoints responden
+JSON y son de lectura. Hay dos familias de sensores: \textbf{Diferencial de Presión (DP)} y
+\textbf{Termohigrómetros (STH)}.
+
+\subsection{Endpoints}
+\begin{center}
+\begin{longtable}{@{}p{4.1cm}p{4.0cm}p{6.3cm}@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Parámetros} & \textbf{Devuelve} \\
+\midrule
+\endhead
+\code{sdp/deviceDP.php} & \textemdash{} & Lista de sensores de presión \\
+\code{sdp/kpiDP.php} & \code{devEui}, \code{preset} ó \code{start+end}, \code{agg} & Serie temporal de presión \\
+\code{sdp/rangoDP.php} & \code{devEui} & Rango operacional de presión \\
+\code{device.php} & \textemdash{} & Lista de termohigrómetros \\
+\code{kpiSTH.php} & \code{deviceName}, \code{preset} ó \code{start+end}, \code{agg} & Serie temporal de temp./humedad \\
+\code{rangoSTH.php} & \code{deviceName} & Rango de aceptación de temp./humedad \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{Campos de los datos}
+
+\paragraph{Sensor de presión (\code{deviceDP.php}).}
+\code{devEui}, \code{identificador}, \code{ubicacion}, \code{area}, \code{seccion},
+\code{tipo\_rango}, \code{label}.
+
+\paragraph{Serie de presión (\code{kpiDP.php}).}
+\begin{center}
+\begin{tabular}{@{}p{4.8cm}p{9.6cm}@{}}
+\toprule
+\textbf{Campo} & \textbf{Significado} \\
+\midrule
+\code{bucket\_time} & Marca de tiempo del intervalo agregado (eje X). \\
+\code{last\_datetime} & Fecha/hora de la última lectura del intervalo. \\
+\code{Differential\_pressure\_Pa} & Presión diferencial en Pascales. \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent\textit{Nota: la serie de presión \textbf{no} incluye batería.}
+
+\paragraph{Serie de termohigrómetro (\code{kpiSTH.php}).}
+\begin{center}
+\begin{tabular}{@{}p{3.4cm}p{11.0cm}@{}}
+\toprule
+\textbf{Campo} & \textbf{Significado} \\
+\midrule
+\code{bucket\_time} & Marca de tiempo del intervalo agregado. \\
+\code{tempC\_SHT} & Temperatura ($^\circ$C) del sensor principal (SHT). \\
+\code{hum\_SHT} & Humedad relativa (\%). \\
+\code{batV} & \textbf{Voltaje de batería del sensor} ($\approx$3.6 V). \\
+\code{tempC\_DS} & Temperatura de una segunda sonda (DS); no se muestra aún. \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent\textbf{Sobre la batería:} el dato \code{batV} \emph{proviene directamente de la API}
+de termohigrómetros, no es estimado. Solo está disponible para STH; los sensores de presión
+no exponen batería.
+
+\paragraph{Rangos (\code{rangoDP.php} / \code{rangoSTH.php}).}
+DP: \code{min\_pa}, \code{max\_pa}, \code{tipo\_rango\_dp}, \code{descripcion\_rango}.\\
+STH: \code{temp\_min}, \code{temp\_max}, \code{hum\_min}, \code{hum\_max}, \code{tipo\_rango\_sth}.
+
+\subsection{Ejemplo de respuesta (termohigrómetro)}
+\begin{verbatim}
+[{"bucket_time":"2026-06-22 21:50:00","tempC_SHT":"20.9",
+  "hum_SHT":"38.4","batV":"3.63","tempC_DS":"2.09"}, ...]
+\end{verbatim}
+
+% ==================================================================
+\section{Qué extraemos y calculamos}
+% ==================================================================
+
+\subsection{Reglas del sistema (reutilizadas del original)}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Conversión de presión}: $1\ \text{inH}_2\text{O} = 249.08891\ \text{Pa}$.
+  \item \textbf{Agregación por periodo} (minutos por punto):
+        24h$\to$5, 2d$\to$5, 3d$\to$5, 7d$\to$15, 30d$\to$60, 12m$\to$1440.
+  \item En rango personalizado, la agregación se estima según la cantidad de días.
+\end{itemize}
+
+\subsection{Métricas derivadas (informe estadístico)}
+A partir de la serie de cada sensor y su rango, calculamos:
+\begin{center}
+\begin{tabular}{@{}p{4.8cm}p{9.6cm}@{}}
+\toprule
+\textbf{Métrica} & \textbf{Cómo se obtiene} \\
+\midrule
+Mínimo / Promedio / Máximo & Sobre las lecturas del periodo. \\
+\% de cumplimiento & Proporción de lecturas dentro del rango de aceptación. \\
+Tiempo fuera de rango & N.\textsuperscript{o} de intervalos fuera $\times$ minutos por intervalo. \\
+Tendencia & Comparación del último tercio vs. el tercio previo. \\
+Estado general & Normal / Advertencia / Alerta según la última lectura vs.\ rango. \\
+Alarmas con histéresis & Se activan al cruzar el umbral y se reponen al volver dentro del 5\% del rango. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent En termohigrómetros estas métricas se calculan \textbf{por separado para temperatura
+y humedad}, y el estado general es el peor de ambas.
+
+% ==================================================================
+\section{Qué se puede hacer}
+% ==================================================================
+
+\subsection{Funcionalidades actuales}
+\begin{itemize}[leftmargin=1.4em]
+  \item Réplica mejorada de las páginas de monitoreo (presión y termohigrómetros) con
+        identidad visual Knop y bandas de rango siempre visibles.
+  \item Selección de sensor y de periodo (24h a 12 meses) y rango de fechas personalizado.
+  \item Auto-actualización en vivo (cada 60 s) y exportación a \textbf{Excel}.
+  \item \textbf{Informe estadístico} (presión o termohigrómetro) con estado, cumplimiento,
+        tiempo fuera de rango, estadísticas, alarmas y exportación a \textbf{PDF}.
+\end{itemize}
+
+\subsection{Extensiones posibles}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Vista por área/sección} y \textbf{comparación} entre varios sensores a la vez.
+  \item \textbf{Panel general} (todos los sensores en una grilla con su estado).
+  \item Aprovechar \code{tempC\_DS} (segunda sonda) y \textbf{alertas de batería baja} (usando \code{batV}).
+  \item \textbf{Notificaciones} (correo / mensajería) ante alarmas o sensores sin reportar.
+  \item \textbf{Informes PDF programados} (p.\,ej.\ mensuales) para soporte de calidad/GMP.
+  \item \textbf{Backend propio} con histórico, para no depender del proveedor.
+  \item \textbf{Autenticación} y dominio personalizado.
+\end{itemize}
+
+% ==================================================================
+\section{Notas operativas}\label{sec:notas}
+% ==================================================================
+\begin{itemize}[leftmargin=1.4em]
+  \item \code{kpiSTH.php} requiere el \emph{nombre completo} del sensor
+        (\code{"CÓDIGO - Ubicación"}), no solo el código.
+  \item Las rutas del proxy responden \code{Cache-Control: no-store} para evitar que el CDN
+        mezcle datos entre sensores; el cacheo del origen se hace en el servidor.
+  \item Datos consumidos con autorización del cliente. El proxy oculta la URL del proveedor.
+\end{itemize}
+
+\vfill
+\noindent\textcolor{knopgreen}{\rule{\textwidth}{0.8pt}}\\[2pt]
+{\footnotesize Repositorio: \url{https://github.com/FranJGT/monitoreo-knop} \quad·\quad
+Producción: \url{https://superlative-truffle-37d616.netlify.app}}
+
+\end{document}
