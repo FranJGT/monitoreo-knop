@@ -22,8 +22,11 @@ export async function GET(req: Request) {
 
   try {
     const data = kind === "sth" ? await fetchSthKpi(q) : await fetchDpKpi(q);
+    // no-store en la respuesta: evita que el CDN cachee por ruta ignorando el
+    // query string (colisión entre sensores/tipos). El upstream sí se cachea
+    // server-side vía el `revalidate` del fetch en lib/knopApi.ts.
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "public, max-age=15, s-maxage=30" },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (e) {
     return NextResponse.json(

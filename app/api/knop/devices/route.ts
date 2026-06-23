@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const data =
       type === "sth" ? await fetchSthDevices() : await fetchDpDevices();
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "public, max-age=60, s-maxage=300" },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (e) {
     return NextResponse.json(
