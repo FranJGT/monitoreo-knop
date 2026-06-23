@@ -1,0 +1,12 @@
+# Configuración de despliegue en Netlify para Next.js (App Router + rutas /api).
+# El Next Runtime de Netlify convierte las páginas SSR y los route handlers en
+# funciones; no es un sitio estático.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
