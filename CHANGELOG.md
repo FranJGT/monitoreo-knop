@@ -4,6 +4,14 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [1.2.1] - 2026-06-24
+
+### Fixed
+- **Estado general coherente con el cumplimiento**: antes el estado usaba una banda de
+  proximidad (8%) y podía marcar "Advertencia" con 100% de cumplimiento (confuso). Ahora:
+  Normal = última lectura en rango y sin lecturas fuera; Advertencia = la actual está dentro
+  pero hubo lecturas fuera en el periodo; Alerta = la lectura actual está fuera.
+
 ## [1.2.0] - 2026-06-24
 
 ### Added

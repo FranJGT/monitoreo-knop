@@ -19,7 +19,7 @@ import {
   compliance,
   outOfRange,
   trend,
-  statusFor,
+  statusFromCompliance,
   evaluateHysteresis,
   type Range,
   type SensorStatus,
@@ -82,8 +82,8 @@ export function SthReport() {
   const lastTemp = last?.tempC ?? null;
   const lastHum = last?.hum ?? null;
 
-  const tempStatus = statusFor(lastTemp, tempRange);
-  const humStatus = statusFor(lastHum, humRange);
+  const tempStatus = statusFromCompliance(lastTemp, tempRange, tempOor.buckets);
+  const humStatus = statusFromCompliance(lastHum, humRange, humOor.buckets);
   const overall: SensorStatus = RANK[tempStatus] >= RANK[humStatus] ? tempStatus : humStatus;
 
   const overallComp =

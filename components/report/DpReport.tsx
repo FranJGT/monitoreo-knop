@@ -28,7 +28,7 @@ import {
   compliance,
   outOfRange,
   trend,
-  statusFor,
+  statusFromCompliance,
   evaluateHysteresis,
 } from "@/lib/stats";
 
@@ -78,7 +78,7 @@ export function DpReport() {
   const oor = useMemo(() => outOfRange(values, range, agg), [values, range, agg]);
   const tr = useMemo(() => trend(values), [values]);
   const last = series.rows.length ? series.rows[series.rows.length - 1]?.pa ?? null : null;
-  const status = statusFor(last, range);
+  const status = statusFromCompliance(last, range, oor.buckets);
 
   const span = range.min != null && range.max != null ? range.max - range.min : 0;
   const lowEval =

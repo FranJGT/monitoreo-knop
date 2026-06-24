@@ -18,14 +18,14 @@ const STYLES: Record<
     ring: "ring-amber-400",
     text: "text-white",
     icon: AlertTriangle,
-    msg: "Cerca del límite operacional",
+    msg: "Hubo lecturas fuera de rango",
   },
   alerta: {
     bg: "bg-gradient-to-br from-red-600 to-red-700",
     ring: "ring-red-500",
     text: "text-white",
     icon: OctagonAlert,
-    msg: "Fuera de rango",
+    msg: "Lectura actual fuera de rango",
   },
 };
 

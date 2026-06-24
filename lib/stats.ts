@@ -69,18 +69,21 @@ export function trend(values: (number | null)[]): Trend {
   return "estable";
 }
 
-/** Estado actual según el último valor vs. el rango (con banda de advertencia). */
-export function statusFor(
+/**
+ * Estado según cumplimiento real del periodo:
+ *  - `alerta`: la última lectura está fuera de rango.
+ *  - `advertencia`: la última está dentro, pero hubo lecturas fuera en el periodo.
+ *  - `normal`: la última está dentro y no hubo ninguna lectura fuera.
+ * `outBuckets` = número de lecturas fuera de rango (de `outOfRange().buckets`).
+ */
+export function statusFromCompliance(
   last: number | null,
   range: Range,
-  warnFraction = 0.08
+  outBuckets: number
 ): SensorStatus {
   if (last == null || range.min == null || range.max == null) return "normal";
   if (last < range.min || last > range.max) return "alerta";
-  const span = range.max - range.min;
-  const margin = Math.max(span * warnFraction, 0);
-  if (last <= range.min + margin || last >= range.max - margin)
-    return "advertencia";
+  if (outBuckets > 0) return "advertencia";
   return "normal";
 }
 
