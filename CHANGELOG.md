@@ -4,6 +4,20 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-06-24
+
+### Added
+- **Batería en el informe**: el informe de termohigrómetros muestra el voltaje de batería
+  (`batV`, real desde `kpiSTH.php`), con aviso "(baja)" si < 3.4 V. En presión se indica
+  "No disponible" (la API de presión no expone batería).
+- Parámetro `?tipo=sth` en `/informe` para abrir directamente el informe de termohigrómetros.
+
+### Changed
+- **Informe en una sola hoja A4 al generar PDF**: layout de impresión compacto que fuerza las
+  grillas a multi-columna (en print el ancho A4 las colapsaba), reduce alturas/espaciados y
+  redibuja el gráfico al alto de impresión. Verificado con Chrome headless (`--print-to-pdf`):
+  1 página para presión y termohigrómetro.
+
 ## [1.1.1] - 2026-06-23
 
 ### Fixed

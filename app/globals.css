@@ -152,10 +152,11 @@ body {
   font-size: 14px;
 }
 
-/* Impresión: el informe se exporta a PDF con calidad */
+/* Impresión: el informe se exporta a PDF en UNA hoja A4 */
 @media print {
   @page {
-    margin: 12mm;
+    size: A4;
+    margin: 7mm;
   }
   html,
   body {
@@ -168,13 +169,56 @@ body {
   .no-print {
     display: none !important;
   }
-  /* Mantener tarjetas legibles y evitar cortes feos */
-  .card {
+  .print-break {
+    break-after: page;
+  }
+
+  /* Layout compacto del informe para que entre en una sola hoja */
+  .informe-root {
+    max-width: none !important;
+    padding: 0 !important;
+    gap: 8px !important;
+    zoom: 0.9;
+  }
+  .informe-root .card {
     box-shadow: none !important;
     border-color: #d6e0d9 !important;
     break-inside: avoid;
+    padding: 9px 11px !important;
   }
-  .print-break {
-    break-after: page;
+  .informe-root h1 {
+    font-size: 20px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* En print el ancho A4 colapsaría los lg:grid-*; forzamos multi-columna */
+  .report-kpis {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+  }
+  .report-main {
+    grid-template-columns: 1fr 2fr !important;
+    gap: 8px !important;
+  }
+  .report-panels {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+  .report-kpis,
+  .report-main,
+  .report-panels {
+    break-inside: avoid;
+  }
+
+  /* Gráfico más bajo en impresión */
+  .report-chart {
+    height: 200px !important;
+    min-height: 0 !important;
+    flex: none !important;
+  }
+
+  /* El estado general no debe cortarse en la columna angosta de impresión */
+  .status-word {
+    font-size: 18px !important;
   }
 }

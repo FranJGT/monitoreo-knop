@@ -9,10 +9,15 @@ import { SthReport } from "@/components/report/SthReport";
 type Tipo = "dp" | "sth";
 
 export default function InformePage() {
-  const [tipo, setTipo] = useState<Tipo>("dp");
+  const [tipo, setTipo] = useState<Tipo>(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("tipo") === "sth"
+      ? "sth"
+      : "dp"
+  );
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
+    <div className="informe-root mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
       <PageHeading
         kicker="Knop Laboratorios · Análisis"
         title="Informe estadístico"

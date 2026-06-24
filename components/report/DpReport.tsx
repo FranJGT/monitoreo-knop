@@ -9,6 +9,7 @@ import {
   MapPin,
   Hash,
   Ruler,
+  BatteryMedium,
 } from "lucide-react";
 import { ChartFrame } from "@/components/ChartFrame";
 import { SensorChart } from "@/components/SensorChart";
@@ -126,7 +127,7 @@ export function DpReport() {
       </p>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="report-kpis grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Última lectura"
           value={last == null ? "—" : fmt(last)}
@@ -154,7 +155,7 @@ export function DpReport() {
       </div>
 
       {/* Estado + gráfico */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="report-main grid grid-cols-1 gap-4 lg:grid-cols-3">
         <StatusHero status={status} compliancePct={comp.pct} outMinutes={oor.minutes} />
         <div className="card flex flex-col p-4 lg:col-span-2">
           <div className="mb-2 flex items-center justify-between">
@@ -162,7 +163,7 @@ export function DpReport() {
             <span className="text-xs text-faint">Línea roja = límite · punteada = promedio</span>
           </div>
           <ChartFrame
-            className="min-h-[320px] flex-1"
+            className="report-chart min-h-[320px] flex-1"
             loading={series.loading && !series.rows.length}
             error={series.error}
             empty={!series.loading && !series.error && !series.rows.length}
@@ -173,7 +174,7 @@ export function DpReport() {
       </div>
 
       {/* Paneles */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="report-panels grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-brand-900">Alarmas y reglas</h3>
@@ -210,7 +211,8 @@ export function DpReport() {
           <InfoRow icon={<MapPin className="h-4 w-4" />} label="Ubicación" value={meta?.ubicacion || "—"} />
           <InfoRow icon={<Activity className="h-4 w-4" />} label="Área / Sección" value={[meta?.area, meta?.seccion].filter(Boolean).join(" · ") || "—"} />
           <InfoRow icon={<Ruler className="h-4 w-4" />} label="Rango operacional" value={rango?.descripcion || (range.min != null ? `${fmt(range.min)}–${fmt(range.max)} Pa` : "—")} />
-          <InfoRow icon={<Gauge className="h-4 w-4" />} label="Tipo de rango" value={rango?.tipo || meta?.tipoRango || "—"} last />
+          <InfoRow icon={<Gauge className="h-4 w-4" />} label="Tipo de rango" value={rango?.tipo || meta?.tipoRango || "—"} />
+          <InfoRow icon={<BatteryMedium className="h-4 w-4" />} label="Batería" value="No disponible" last />
         </div>
       </div>
     </>

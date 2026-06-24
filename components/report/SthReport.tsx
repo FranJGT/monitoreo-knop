@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Thermometer, Droplets, MapPin, Hash, Activity } from "lucide-react";
+import { Thermometer, Droplets, MapPin, Hash, Activity, BatteryMedium } from "lucide-react";
 import { ChartFrame } from "@/components/ChartFrame";
 import { SensorChart } from "@/components/SensorChart";
 import { StatusHero } from "@/components/kpi/StatusHero";
@@ -128,7 +128,7 @@ export function SthReport() {
       </p>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="report-kpis grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Temperatura"
           value={lastTemp == null ? "—" : fmt(lastTemp, 1)}
@@ -162,7 +162,7 @@ export function SthReport() {
       </div>
 
       {/* Estado + gráfico */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="report-main grid grid-cols-1 gap-4 lg:grid-cols-3">
         <StatusHero status={overall} compliancePct={overallComp} outMinutes={overallOut} />
         <div className="card flex flex-col p-4 lg:col-span-2">
           <div className="mb-2 flex items-center justify-between">
@@ -170,7 +170,7 @@ export function SthReport() {
             <span className="text-xs text-faint">Bandas = rango de aceptación</span>
           </div>
           <ChartFrame
-            className="min-h-[320px] flex-1"
+            className="report-chart min-h-[320px] flex-1"
             loading={series.loading && !series.rows.length}
             error={series.error}
             empty={!series.loading && !series.error && !series.rows.length}
@@ -181,7 +181,7 @@ export function SthReport() {
       </div>
 
       {/* Paneles */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="report-panels grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-brand-900">Alarmas y reglas</h3>
@@ -223,7 +223,17 @@ export function SthReport() {
           <InfoRow icon={<MapPin className="h-4 w-4" />} label="Ubicación" value={meta?.ubicacion || "—"} />
           <InfoRow icon={<Activity className="h-4 w-4" />} label="Tipo de rango" value={rango?.tipo || "—"} />
           <InfoRow icon={<Thermometer className="h-4 w-4" />} label="Rango temperatura" value={tempRange.min != null ? `${tempRange.min}–${tempRange.max} °C` : "—"} />
-          <InfoRow icon={<Droplets className="h-4 w-4" />} label="Rango humedad" value={humRange.min != null ? `${humRange.min}–${humRange.max} %` : "—"} last />
+          <InfoRow icon={<Droplets className="h-4 w-4" />} label="Rango humedad" value={humRange.min != null ? `${humRange.min}–${humRange.max} %` : "—"} />
+          <InfoRow
+            icon={<BatteryMedium className="h-4 w-4" />}
+            label="Batería"
+            value={
+              last?.batV == null
+                ? "—"
+                : `${fmt(last.batV, 2)} V${last.batV < 3.4 ? " (baja)" : ""}`
+            }
+            last
+          />
         </div>
       </div>
     </>

@@ -37,9 +37,21 @@ export function SensorChart({ option, className, notMerge = true }: Props) {
     const onWin = () => chart.resize();
     window.addEventListener("resize", onWin);
 
+    // Redibujar al alto reducido de impresión (PDF en una hoja) y al volver.
+    const onBeforePrint = () => chart.resize();
+    const onAfterPrint = () => chart.resize();
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    const mql = window.matchMedia("print");
+    const onMql = () => chart.resize();
+    mql.addEventListener?.("change", onMql);
+
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", onWin);
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+      mql.removeEventListener?.("change", onMql);
       chart.dispose();
       chartRef.current = null;
     };

@@ -52,7 +52,7 @@ export function StatusHero({
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/75">
             Estado general
           </div>
-          <div className="mt-1 text-4xl font-extrabold leading-none text-white">
+          <div className="status-word mt-1 text-[30px] font-extrabold leading-[1.05] text-white">
             {STATUS_LABEL[status].toUpperCase()}
           </div>
           <div className="mt-2 text-sm font-medium text-white/85">{s.msg}</div>
