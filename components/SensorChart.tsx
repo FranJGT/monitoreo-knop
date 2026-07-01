@@ -19,6 +19,19 @@ type Props = {
   notMerge?: boolean;
 };
 
+/**
+ * Ajusta el gráfico al tamaño REAL del contenedor usando su bounding box.
+ * Evita el canvas de ancho 0 cuando ECharts se inicializa antes de que el
+ * layout (flex/grid) haya calculado el ancho del contenedor.
+ */
+function fitChart(chart: echarts.ECharts | null, el: HTMLElement | null) {
+  if (!chart || !el) return;
+  const { width, height } = el.getBoundingClientRect();
+  if (width > 0 && height > 0) {
+    chart.resize({ width: Math.round(width), height: Math.round(height) });
+  }
+}
+
 export function SensorChart({ option, className, notMerge = true }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
@@ -32,26 +45,30 @@ export function SensorChart({ option, className, notMerge = true }: Props) {
     const chart = echarts.init(el, KNOP_THEME_NAME, { renderer: "canvas" });
     chartRef.current = chart;
 
-    const ro = new ResizeObserver(() => chart.resize());
+    const fit = () => fitChart(chartRef.current, el);
+    // Ajuste inicial tras el primer layout (evita canvas de ancho 0 en grids/flex).
+    let raf = requestAnimationFrame(() => {
+      fit();
+      raf = requestAnimationFrame(fit);
+    });
+
+    const ro = new ResizeObserver(fit);
     ro.observe(el);
-    const onWin = () => chart.resize();
-    window.addEventListener("resize", onWin);
+    window.addEventListener("resize", fit);
 
     // Redibujar al alto reducido de impresión (PDF en una hoja) y al volver.
-    const onBeforePrint = () => chart.resize();
-    const onAfterPrint = () => chart.resize();
-    window.addEventListener("beforeprint", onBeforePrint);
-    window.addEventListener("afterprint", onAfterPrint);
+    window.addEventListener("beforeprint", fit);
+    window.addEventListener("afterprint", fit);
     const mql = window.matchMedia("print");
-    const onMql = () => chart.resize();
-    mql.addEventListener?.("change", onMql);
+    mql.addEventListener?.("change", fit);
 
     return () => {
+      cancelAnimationFrame(raf);
       ro.disconnect();
-      window.removeEventListener("resize", onWin);
-      window.removeEventListener("beforeprint", onBeforePrint);
-      window.removeEventListener("afterprint", onAfterPrint);
-      mql.removeEventListener?.("change", onMql);
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("beforeprint", fit);
+      window.removeEventListener("afterprint", fit);
+      mql.removeEventListener?.("change", fit);
       chart.dispose();
       chartRef.current = null;
     };
@@ -62,7 +79,7 @@ export function SensorChart({ option, className, notMerge = true }: Props) {
     const chart = chartRef.current;
     if (!chart) return;
     chart.setOption(option, { notMerge, lazyUpdate: true });
-    chart.resize();
+    fitChart(chart, containerRef.current);
   }, [option, notMerge]);
 
   return <div ref={containerRef} className={className} />;

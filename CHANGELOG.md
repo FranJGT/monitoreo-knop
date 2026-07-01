@@ -4,6 +4,27 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-07-01
+
+### Fixed
+- **Gráficos en blanco al cargar (canvas de ancho 0)**. ECharts se inicializaba antes de que el
+  layout flex/grid calculara el ancho del contenedor y el `ResizeObserver` no corregía ese primer
+  render, dejando el `<canvas>` con `width: 0` (alto correcto) hasta que ocurría un *resize* manual.
+  Afectaba a `/monitoreo/sdp`, `/monitoreo/termohigrometros` y sobre todo al gráfico del `/informe`
+  (dentro de una grilla `lg:grid-cols-3`). `SensorChart` ahora ajusta el gráfico al *bounding box*
+  real del contenedor tras el primer layout (`requestAnimationFrame`) y en cada actualización de
+  opción, en vez de confiar solo en el `resize()` sin dimensiones. Verificado en carga fría: los
+  tres gráficos se dibujan sin interacción del usuario.
+
+### Added
+- **Script de verificación `scripts/compare-knop.mjs`**: compara, caso por caso, que la información
+  (datos + Excel) que entrega la app coincide con la del sistema original de Softronica, que consume
+  la misma API. Replica la lógica de parámetros de ambos sistemas, golpea la API real y arma ambos
+  Excel con SheetJS para compararlos celda por celda. Cubre **DP y STH × 6 periodos** + rangos
+  personalizados + **barrido de todos los dispositivos** (91 DP + 34 STH). Genera
+  `docs/reporte-comparacion.md`. **Resultado: 165 casos, 0 diferencias de datos.** Uso:
+  `node scripts/compare-knop.mjs`.
+
 ## [1.3.0] - 2026-07-01
 
 ### Fixed
