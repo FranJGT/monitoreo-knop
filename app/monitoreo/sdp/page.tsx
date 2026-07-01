@@ -63,16 +63,25 @@ export default function SdpPage() {
     [series.rows, rango, sensorLabel]
   );
 
+  // Export idéntico al del sistema original: columnas crudas bucket_time/
+  // last_datetime/Differential_pressure_Pa, hoja "datos" y nombre
+  // dp_<sensor>_<preset|inicio_fin>_<agg>min.xlsx.
   const handleExport = () => {
     const rows = series.rows.map((r) => ({
-      "Fecha/Hora": formatDateToMinute(r.t),
-      "Presión (Pa)": r.pa,
-      "inH₂O": r.pa == null ? null : Number(paToInH2O(r.pa).toFixed(3)),
+      bucket_time: r.t ?? "",
+      last_datetime: r.last ?? "",
+      Differential_pressure_Pa: r.pa,
     }));
+    const rangeLabel =
+      series.query.start && series.query.end
+        ? `${series.query.start}_${series.query.end}`
+        : series.preset ?? "24h";
+    const aggMin = series.query.agg ?? 5;
     exportRowsToXlsx(
-      `${safeFileName(sensorLabel || selected)}_presion.xlsx`,
+      `dp_${safeFileName(sensorLabel || selected)}_${rangeLabel}_${aggMin}min.xlsx`,
       rows,
-      "Diferencial de Presión"
+      "datos",
+      ["bucket_time", "last_datetime", "Differential_pressure_Pa"]
     );
   };
 

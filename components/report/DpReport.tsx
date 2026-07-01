@@ -71,7 +71,7 @@ export function DpReport() {
     () => ({ min: rango?.minPa ?? null, max: rango?.maxPa ?? null }),
     [rango?.minPa, rango?.maxPa]
   );
-  const agg = series.query.agg;
+  const agg = series.query.agg ?? 5;
 
   const stats = useMemo(() => summarize(values), [values]);
   const comp = useMemo(() => compliance(values, range), [values, range]);

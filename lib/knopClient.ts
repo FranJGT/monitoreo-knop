@@ -26,7 +26,8 @@ export type KpiClientParams = {
   preset?: PresetKey;
   start?: string;
   end?: string;
-  agg?: number;
+  /** `null` = no enviar agg (usa el agg por defecto del servidor). */
+  agg?: number | null;
 };
 
 function kpiUrl(kind: "dp" | "sth", p: KpiClientParams): string {

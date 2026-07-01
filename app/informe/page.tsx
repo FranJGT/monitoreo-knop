@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Printer, Gauge, Thermometer } from "lucide-react";
 import { PageHeading } from "@/components/PageHeading";
 import { DpReport } from "@/components/report/DpReport";
@@ -15,6 +15,14 @@ export default function InformePage() {
       ? "sth"
       : "dp"
   );
+
+  // La fecha de generación se calcula solo en el cliente tras el montaje:
+  // evita el desajuste de hidratación (los segundos difieren entre SSR y cliente).
+  const [generadoEl, setGeneradoEl] = useState<string>("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGeneradoEl(new Date().toLocaleString("es-CL"));
+  }, []);
 
   return (
     <div className="informe-root mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
@@ -47,8 +55,7 @@ export default function InformePage() {
       {tipo === "dp" ? <DpReport /> : <SthReport />}
 
       <p className="mt-1 text-center text-xs text-faint">
-        Informe generado el {new Date().toLocaleString("es-CL")} · Knop Laboratorios ·
-        Monitoreo ambiental
+        Informe generado el {generadoEl} · Knop Laboratorios · Monitoreo ambiental
       </p>
     </div>
   );

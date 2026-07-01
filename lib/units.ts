@@ -45,6 +45,29 @@ export function formatLabelDate(raw: string | number | Date): string {
   return `${dd}-${mm}-${yyyy} ${hh}:${min}:00`;
 }
 
+/** Recorta a "YYYY-MM-DD HH:mm" (sin segundos). */
+function stripSeconds(ts: string | number | Date): string {
+  if (ts == null || ts === "") return "";
+  return String(ts).replace("T", " ").replace("Z", "").slice(0, 16);
+}
+
+/**
+ * Formato de la columna de tiempo del Excel STH: "dd/mm/yyyy HH:mm".
+ * Replica formatExcelTime() del sistema original.
+ */
+export function formatExcelTime(raw: string | number | Date): string {
+  const c = stripSeconds(raw);
+  if (!c || c.length < 16) return "";
+  return `${c.slice(8, 10)}/${c.slice(5, 7)}/${c.slice(0, 4)} ${c.slice(11, 16)}`;
+}
+
+/** "YYYY-MM-DD" → "dd-mm-yyyy" (para nombres de archivo). */
+export function ymdToDmy(ymd: string): string {
+  if (!ymd) return "";
+  const [y, m, d] = String(ymd).split("-");
+  return `${d}-${m}-${y}`;
+}
+
 /** Formatea un número con n decimales y separadores es-CL; "—" si null/NaN. */
 export function fmt(
   value: number | null | undefined,

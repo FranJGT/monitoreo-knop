@@ -11,7 +11,12 @@ import { AlarmRow, StatRow, InfoRow, PanelSubhead } from "./parts";
 import { getSthDevices, getSthKpi, getSthRango } from "@/lib/knopClient";
 import { useSensorSeries } from "@/lib/useSensorSeries";
 import { buildSthOption } from "@/lib/charts/sthOption";
-import { PRESETS } from "@/lib/aggregation";
+import {
+  PRESETS,
+  aggForPresetSth,
+  estimateAggFromDatesSth,
+  presetRangeYmd,
+} from "@/lib/aggregation";
 import type { SthDevice, RangoSth } from "@/lib/knopTypes";
 import { fmt, formatDateToMinute } from "@/lib/units";
 import {
@@ -41,7 +46,13 @@ export function SthReport() {
       .catch(() => setDevices([]));
   }, []);
 
-  const series = useSensorSeries({ id: selected, fetchData: getSthKpi });
+  const series = useSensorSeries({
+    id: selected,
+    fetchData: getSthKpi,
+    aggForPreset: aggForPresetSth,
+    estimateAgg: estimateAggFromDatesSth,
+    presetToRange: presetRangeYmd,
+  });
 
   useEffect(() => {
     if (!selected) return;
@@ -56,7 +67,8 @@ export function SthReport() {
 
   const meta = devices.find((d) => d.name === selected) ?? null;
   const sensorLabel = meta?.name || selected;
-  const agg = series.query.agg;
+  // `null` = agg por defecto del servidor (~5 min); se usa 5 para estimar minutos fuera.
+  const agg = series.query.agg ?? 5;
 
   const tempVals = useMemo(() => series.rows.map((r) => r.tempC), [series.rows]);
   const humVals = useMemo(() => series.rows.map((r) => r.hum), [series.rows]);
@@ -101,8 +113,10 @@ export function SthReport() {
   const hHigh = humRange.max != null ? evaluateHysteresis(humVals, { kind: "high", threshold: humRange.max, recover: humRange.max - hSpan * 0.05 }, agg) : null;
   const activeAlarms = [tLow, tHigh, hLow, hHigh].filter((e) => e?.active).length;
 
+  // En modo preset la query lleva start/end (STH), así que el rango personalizado
+  // se detecta por `series.range`, no por la presencia de start/end.
   const periodLabel =
-    series.query.start && series.query.end
+    series.range?.from && series.range?.to
       ? `${series.query.start} a ${series.query.end}`
       : PRESETS.find((p) => p.key === series.preset)?.label ?? "—";
 

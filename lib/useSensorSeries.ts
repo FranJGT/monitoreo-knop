@@ -14,25 +14,47 @@ type Query = {
   preset?: PresetKey;
   start?: string;
   end?: string;
-  agg: number;
+  agg: number | null;
 };
 
-function buildQuery(preset: PresetKey | null, range?: DateRange): Query {
+type AggFns = {
+  aggFn: (k: PresetKey) => number | null;
+  estimateFn: (start: string, end: string) => number | null;
+  /** Si se define, los presets se convierten a start/end (p. ej. STH, cuyo
+   *  endpoint no respeta `preset`). */
+  presetToRange?: (k: PresetKey) => { start: string; end: string };
+};
+
+function buildQuery(preset: PresetKey | null, range: DateRange | undefined, fns: AggFns): Query {
   if (range?.from && range?.to) {
     const start = ymdLocal(range.from);
     const end = ymdLocal(range.to);
-    return { start, end, agg: estimateAggFromDates(start, end) };
+    return { start, end, agg: fns.estimateFn(start, end) };
   }
   const p = preset ?? "24h";
-  return { preset: p, agg: aggForPreset(p) };
+  if (fns.presetToRange) {
+    const r = fns.presetToRange(p);
+    return { start: r.start, end: r.end, agg: fns.aggFn(p) };
+  }
+  return { preset: p, agg: fns.aggFn(p) };
 }
 
 export function useSensorSeries<TRow>(opts: {
   id: string;
   fetchData: (q: KpiClientParams, signal: AbortSignal) => Promise<TRow[]>;
   autoRefreshMs?: number;
+  aggForPreset?: (k: PresetKey) => number | null;
+  estimateAgg?: (start: string, end: string) => number | null;
+  presetToRange?: (k: PresetKey) => { start: string; end: string };
 }) {
-  const { id, fetchData, autoRefreshMs = 60000 } = opts;
+  const {
+    id,
+    fetchData,
+    autoRefreshMs = 60000,
+    aggForPreset: aggFn = aggForPreset,
+    estimateAgg: estimateFn = estimateAggFromDates,
+    presetToRange,
+  } = opts;
 
   const [preset, setPresetState] = useState<PresetKey | null>("24h");
   const [range, setRange] = useState<DateRange | undefined>(undefined);
@@ -42,7 +64,7 @@ export function useSensorSeries<TRow>(opts: {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const controllerRef = useRef<AbortController | null>(null);
-  const query = buildQuery(preset, range);
+  const query = buildQuery(preset, range, { aggFn, estimateFn, presetToRange });
 
   const load = useCallback(
     async (silent = false) => {

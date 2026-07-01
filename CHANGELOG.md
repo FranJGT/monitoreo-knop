@@ -4,6 +4,31 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-07-01
+
+### Fixed
+- **Termohigrómetros: los periodos 2d/3d/7d/30d/12m mostraban solo ~1 día**. El endpoint del
+  cliente `kpiSTH.php` **ignora el parámetro `preset`** y devuelve solo la ventana por defecto;
+  el sistema original siempre consulta por `start`/`end`. La app STH usaba `preset` (heredado del
+  patrón de presión), por lo que al elegir cualquier periodo mayor a 24 h el gráfico y el Excel
+  traían solo un día. Ahora el STH convierte el preset a rango de fechas (`presetRangeYmd`) y usa
+  el mapeo de agregación del original (`AGG_MAP_STH`: 24h/2d/3d sin agg, 7d=10, 30d=30, 12m=60).
+  Verificado dato por dato contra el sistema original en los 6 periodos (0 discrepancias).
+- **Error de hidratación en `/informe`**: la fecha "Informe generado el …" se renderizaba con
+  `new Date()` en servidor y cliente a la vez (segundos distintos → *hydration mismatch* en cada
+  carga). Ahora se calcula solo en el cliente tras el montaje.
+
+### Changed
+- **Exportación a Excel idéntica al sistema original** (antes tenía columnas y nombres propios):
+  - **Presión**: hoja `datos`, columnas crudas `bucket_time` / `last_datetime` /
+    `Differential_pressure_Pa`; archivo `dp_<sensor>_<preset|inicio_fin>_<agg>min.xlsx`.
+  - **Termohigrómetro**: hoja `datos`, columnas `time` (dd/mm/yyyy HH:mm) / `hum_SHT` /
+    `tempC_SHT`; archivo `sensor_<sensor>_<inicio>_<fin>_<agg>min_<timestamp>.xlsx`.
+  - `exportRowsToXlsx` acepta un parámetro `header` para fijar el orden exacto de columnas.
+- `useSensorSeries` admite mapeos de agregación por tipo de sensor y conversión de preset a
+  `start`/`end` (para endpoints que no respetan `preset`, como el STH). El de presión no cambia
+  (su endpoint `kpiDP.php` sí respeta `preset`).
+
 ## [1.2.1] - 2026-06-24
 
 ### Fixed

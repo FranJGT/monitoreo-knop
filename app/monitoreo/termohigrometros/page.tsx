@@ -9,8 +9,13 @@ import { SensorChart } from "@/components/SensorChart";
 import { getSthDevices, getSthKpi, getSthRango } from "@/lib/knopClient";
 import { useSensorSeries } from "@/lib/useSensorSeries";
 import { buildSthOption } from "@/lib/charts/sthOption";
+import {
+  aggForPresetSth,
+  estimateAggFromDatesSth,
+  presetRangeYmd,
+} from "@/lib/aggregation";
 import type { SthDevice, RangoSth } from "@/lib/knopTypes";
-import { fmt, formatDateToMinute } from "@/lib/units";
+import { fmt, formatDateToMinute, formatExcelTime, ymdToDmy } from "@/lib/units";
 import { exportRowsToXlsx, safeFileName } from "@/lib/exportXlsx";
 
 export default function SthPage() {
@@ -27,7 +32,13 @@ export default function SthPage() {
       .catch(() => setDevices([]));
   }, []);
 
-  const series = useSensorSeries({ id: selected, fetchData: getSthKpi });
+  const series = useSensorSeries({
+    id: selected,
+    fetchData: getSthKpi,
+    aggForPreset: aggForPresetSth,
+    estimateAgg: estimateAggFromDatesSth,
+    presetToRange: presetRangeYmd,
+  });
 
   useEffect(() => {
     if (!selected) return;
@@ -55,17 +66,29 @@ export default function SthPage() {
     [series.rows, rango, sensorLabel]
   );
 
+  // Export idéntico al del sistema original: columnas time/hum_SHT/tempC_SHT,
+  // hoja "datos" y nombre sensor_<base>_<inicio>_<fin>_<agg>min_<stamp>.xlsx.
   const handleExport = () => {
     const rows = series.rows.map((r) => ({
-      "Fecha/Hora": formatDateToMinute(r.t),
-      "Temperatura (°C)": r.tempC,
-      "Humedad (%)": r.hum,
-      "Batería (V)": r.batV,
+      time: formatExcelTime(r.t),
+      hum_SHT: r.hum,
+      tempC_SHT: r.tempC,
     }));
+    const start = series.query.start ?? "";
+    const end = series.query.end ?? "";
+    const aggMin = series.query.agg ?? 1;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+      now.getDate()
+    )}_${pad(now.getHours())}${pad(now.getMinutes())}`;
     exportRowsToXlsx(
-      `${safeFileName(sensorLabel || selected)}_termohigrometro.xlsx`,
+      `sensor_${safeFileName(sensorLabel || selected)}_${ymdToDmy(start)}_${ymdToDmy(
+        end
+      )}_${aggMin}min_${stamp}.xlsx`,
       rows,
-      "Termohigrómetro"
+      "datos",
+      ["time", "hum_SHT", "tempC_SHT"]
     );
   };
 
