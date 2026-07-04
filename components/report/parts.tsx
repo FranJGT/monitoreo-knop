@@ -64,7 +64,7 @@ export function InfoRow({
 }: {
   icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
   last?: boolean;
 }) {
   return (

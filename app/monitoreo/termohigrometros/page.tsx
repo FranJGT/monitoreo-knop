@@ -16,6 +16,7 @@ import {
 } from "@/lib/aggregation";
 import type { SthDevice, RangoSth } from "@/lib/knopTypes";
 import { fmt, formatDateToMinute, formatExcelTime, ymdToDmy } from "@/lib/units";
+import { batteryStatus, BATTERY_STATUS_LABEL, BATTERY_STATUS_COLOR } from "@/lib/stats";
 import { exportRowsToXlsx, safeFileName } from "@/lib/exportXlsx";
 
 export default function SthPage() {
@@ -153,7 +154,18 @@ export default function SthPage() {
         <InfoStat
           icon={<BatteryMedium className="h-4 w-4" />}
           label="Batería · medición"
-          value={last?.batV == null ? "—" : `${fmt(last.batV, 2)} V`}
+          value={
+            last?.batV == null ? (
+              "—"
+            ) : (
+              <>
+                {fmt(last.batV, 2)} V{" "}
+                <span className={`text-sm ${BATTERY_STATUS_COLOR[batteryStatus(last.batV)!]}`}>
+                  · {BATTERY_STATUS_LABEL[batteryStatus(last.batV)!]}
+                </span>
+              </>
+            )
+          }
           sub={last ? formatDateToMinute(last.t) : undefined}
         />
       </div>
@@ -178,7 +190,7 @@ function InfoStat({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
   sub?: string;
 }) {
   return (

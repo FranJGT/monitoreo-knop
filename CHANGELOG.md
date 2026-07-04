@@ -4,6 +4,18 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-07-04
+
+### Added
+- **Estado de batería del termohigrómetro**: junto al voltaje se muestra ahora su traducción según
+  el rango definido por el cliente — 3,6–3,3 V **Óptimo** (verde), 3,2–2,9 V **Normal** (ámbar),
+  2,8 V hacia abajo **Reemplazo** (rojo). Nueva utilidad `batteryStatus()` en `lib/stats.ts`,
+  visible en `/monitoreo/termohigrometros` (tarjeta "Batería · medición") y en el informe STH.
+
+### Changed
+- El informe STH deja de usar el sufijo "(baja)" con umbral fijo de 3,4 V; se reemplaza por la
+  traducción de estado anterior.
+
 ## [1.4.0] - 2026-07-01
 
 ### Fixed

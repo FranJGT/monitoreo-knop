@@ -149,3 +149,25 @@ export const STATUS_LABEL: Record<SensorStatus, string> = {
   advertencia: "Advertencia",
   alerta: "Alerta",
 };
+
+export type BatteryStatus = "optimo" | "normal" | "reemplazo";
+
+export const BATTERY_STATUS_LABEL: Record<BatteryStatus, string> = {
+  optimo: "Óptimo",
+  normal: "Normal",
+  reemplazo: "Reemplazo",
+};
+
+export const BATTERY_STATUS_COLOR: Record<BatteryStatus, string> = {
+  optimo: "text-ok",
+  normal: "text-amber-600",
+  reemplazo: "text-alert",
+};
+
+// 3.6–3.3 V óptimo · 3.2–2.9 V normal · 2.8 V o menos reemplazo
+export function batteryStatus(batV: number | null | undefined): BatteryStatus | null {
+  if (batV == null || Number.isNaN(batV)) return null;
+  if (batV >= 3.3) return "optimo";
+  if (batV >= 2.9) return "normal";
+  return "reemplazo";
+}

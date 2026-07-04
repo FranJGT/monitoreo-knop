@@ -26,6 +26,9 @@ import {
   trend,
   statusFromCompliance,
   evaluateHysteresis,
+  batteryStatus,
+  BATTERY_STATUS_LABEL,
+  BATTERY_STATUS_COLOR,
   type Range,
   type SensorStatus,
 } from "@/lib/stats";
@@ -242,9 +245,16 @@ export function SthReport() {
             icon={<BatteryMedium className="h-4 w-4" />}
             label="Batería"
             value={
-              last?.batV == null
-                ? "—"
-                : `${fmt(last.batV, 2)} V${last.batV < 3.4 ? " (baja)" : ""}`
+              last?.batV == null ? (
+                "—"
+              ) : (
+                <>
+                  {fmt(last.batV, 2)} V{" "}
+                  <span className={BATTERY_STATUS_COLOR[batteryStatus(last.batV)!]}>
+                    · {BATTERY_STATUS_LABEL[batteryStatus(last.batV)!]}
+                  </span>
+                </>
+              )
             }
             last
           />
