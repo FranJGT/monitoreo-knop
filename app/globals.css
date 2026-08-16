@@ -39,6 +39,7 @@
   --color-alert: #dc2626;
   --color-alert-soft: #fde2e2;
   --color-info: #0e7490;
+  --color-info-soft: #dcf0f5;
 
   /* Tipografía */
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, -apple-system,

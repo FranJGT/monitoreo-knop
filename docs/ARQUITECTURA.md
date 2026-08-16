@@ -53,6 +53,33 @@ Base: `https://newenergy.softronica.cl/knop/monitoreo/`
 Fetchers de servidor en `lib/knopApi.ts`; cliente tipado en `lib/knopClient.ts`;
 tipos compartidos en `lib/knopTypes.ts`.
 
+## Bitácora (`app/api/bitacora/*` + MySQL)
+
+La bitácora no consume la API del cliente: persiste en **MySQL** (tabla
+`bitacora_eventos`, ver `docs/database/migrations/001_bitacora_eventos.md`).
+
+```
+Navegador (React) → /api/bitacora/* → MySQL (pool en lib/db.ts, queries parametrizadas)
+```
+
+| Ruta | Método | Función |
+|------|--------|---------|
+| `/api/bitacora` | GET | Lista (filtros `tipo`, `texto`, `desde`, `hasta`; máx. 500, más recientes primero) |
+| `/api/bitacora` | POST | Crear evento (validación server-side en `lib/bitacora.ts`) |
+| `/api/bitacora/[id]` | PATCH | Editar evento (merge con estado actual) |
+
+Reglas de negocio:
+
+- **Sin DELETE** por diseño: es un registro de calidad; solo se edita.
+- `fecha_hora` se guarda en hora local de Chile como `DATETIME` (`YYYY-MM-DD HH:mm:ss`);
+  el formulario envía `datetime-local` y `normalizeFechaHora()` lo normaliza.
+- Validación server-side en `lib/bitacora.ts`: tipo dentro de `EVENT_TYPES`, título y autor
+  obligatorios, límites de longitud (título 200, autor/área 100).
+- Conexión por variables de entorno (`MYSQL_*`, ver `.env.example`); pool único en
+  `globalThis` para evitar fugas de conexión con el hot-reload de Next (`lib/db.ts`).
+- Tipos compartidos cliente/servidor en `lib/bitacoraMeta.ts`; cliente en
+  `lib/bitacoraClient.ts`; exportación Excel en `lib/bitacoraExport.ts` (patrón `exportXlsx`).
+
 ## Gráficos
 
 ECharts vía wrapper `components/SensorChart.tsx` con tema Knop (`lib/echartsTheme.ts`).

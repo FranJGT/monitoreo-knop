@@ -4,6 +4,24 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y
 versionamiento [SemVer](https://semver.org/lang/es/).
 
+## [2.0.0] - 2026-08-13
+
+### Added
+- **Bitácora de eventos** (`/bitacora`): registro de calidad para visitas, mantenciones,
+  incidentes, calibraciones y eventos genéricos, con fecha/hora, título, área, descripción y autor.
+  Timeline cronológica agrupada por día, filtros por tipo y búsqueda por texto, edición de eventos
+  (sin borrado, por tratarse de un registro de calidad) y exportación a Excel.
+- **Persistencia en MySQL**: nueva tabla `bitacora_eventos` (ver
+  `docs/database/migrations/001_bitacora_eventos.md`) administrada con `mysql2` (queries
+  parametrizadas, pool único en `lib/db.ts`). La conexión se configura por variables de entorno
+  `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` y `MYSQL_DATABASE` (ver `.env.example`).
+- **API de bitácora**: `GET/POST /api/bitacora` (lista con filtros tipo/texto/fechas y creación)
+  y `PATCH /api/bitacora/[id]` (edición). No existe `DELETE` por diseño.
+- Navegación: "Bitácora" en el header y tarjeta de acceso en el home.
+
+### Changed
+- El home pasa a grilla de 4 columnas en pantallas grandes (nueva sección agregada).
+
 ## [1.5.0] - 2026-07-04
 
 ### Added

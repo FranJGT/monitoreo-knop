@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gauge, Thermometer, BarChart3 } from "lucide-react";
+import { Gauge, Thermometer, BarChart3, NotebookPen } from "lucide-react";
 
 const NAV = [
   {
@@ -19,6 +19,7 @@ const NAV = [
     icon: Thermometer,
   },
   { href: "/informe", label: "Informe", short: "Informe", icon: BarChart3 },
+  { href: "/bitacora", label: "Bitácora", short: "Bitácora", icon: NotebookPen },
 ];
 
 export function SiteHeader() {

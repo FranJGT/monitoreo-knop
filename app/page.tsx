@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Gauge, Thermometer, BarChart3, ArrowRight, Activity } from "lucide-react";
+import { Gauge, Thermometer, BarChart3, ArrowRight, Activity, NotebookPen } from "lucide-react";
 
 const CARDS = [
   {
@@ -19,6 +19,12 @@ const CARDS = [
     icon: BarChart3,
     title: "Informe estadístico",
     desc: "Estado general, cumplimiento, tiempo fuera de rango y alarmas — listo para exportar a PDF.",
+  },
+  {
+    href: "/bitacora",
+    icon: NotebookPen,
+    title: "Bitácora",
+    desc: "Registro de eventos del laboratorio: visitas, mantenciones, incidentes y calibraciones.",
   },
 ];
 
@@ -41,7 +47,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {CARDS.map(({ href, icon: Icon, title, desc }) => (
           <Link
             key={href}
