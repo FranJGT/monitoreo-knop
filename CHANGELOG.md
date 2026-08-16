@@ -18,6 +18,7 @@ versionamiento [SemVer](https://semver.org/lang/es/).
 - **API de bitácora**: `GET/POST /api/bitacora` (lista con filtros tipo/texto/fechas y creación)
   y `PATCH /api/bitacora/[id]` (edición). No existe `DELETE` por diseño.
 - Navegación: "Bitácora" en el header y tarjeta de acceso en el home.
+- **Guía de uso** de la bitácora en `docs/GUIA-BITACORA.md` (registrar, editar, filtrar y exportar).
 
 ### Changed
 - El home pasa a grilla de 4 columnas en pantallas grandes (nueva sección agregada).

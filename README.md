@@ -149,5 +149,7 @@ node scripts/compare-knop.mjs   # genera docs/reporte-comparacion.md
 ## Documentación
 
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — arquitectura y reglas de negocio.
+- [`docs/GUIA-BITACORA.md`](docs/GUIA-BITACORA.md) — guía de uso de la bitácora (registrar, editar, filtrar, exportar).
+- [`docs/database/SCHEMA.md`](docs/database/SCHEMA.md) — estado actual del esquema de base de datos.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.
 - [`docs/documentacion-sistema.pdf`](docs/documentacion-sistema.pdf) — documentación del sistema.
