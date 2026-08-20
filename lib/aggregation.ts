@@ -5,6 +5,7 @@
 import { ymdLocal } from "./units";
 
 export type PresetKey = "24h" | "2d" | "3d" | "7d" | "30d" | "12m";
+export const EXPECTED_SAMPLE_INTERVAL_MINUTES = 30;
 
 export const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "24h", label: "24 Horas" },
@@ -14,6 +15,19 @@ export const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "30d", label: "30 Días" },
   { key: "12m", label: "12 Meses" },
 ];
+
+/** Intervalo observado entre buckets, sin fabricar ni interpolar lecturas. */
+export function observedIntervalMinutes(timestamps: string[]): number | null {
+  const values = timestamps
+    .map((t) => Date.parse(String(t).replace(" ", "T")))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (values.length < 2) return null;
+  const deltas = values.slice(1).map((v, i) => (v - values[i]) / 60000).filter((v) => v > 0);
+  if (!deltas.length) return null;
+  deltas.sort((a, b) => a - b);
+  return Math.round(deltas[Math.floor(deltas.length / 2)]);
+}
 
 export const AGG_MAP: Record<PresetKey, number> = {
   "24h": 5,

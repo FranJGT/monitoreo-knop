@@ -5,15 +5,18 @@ import { X, Loader2 } from "lucide-react";
 import {
   EVENT_TYPES,
   TIPO_LABEL,
+  LEGACY_EVENT_TYPES,
   type EventoBitacora,
   type EventoInput,
 } from "@/lib/bitacoraMeta";
+import { getDpDevices, getSthDevices } from "@/lib/knopClient";
+import type { DpDevice, SthDevice } from "@/lib/knopTypes";
 
 type Props = {
   /** Si viene, es edición; si es null, creación. */
   evento: EventoBitacora | null;
   onClose: () => void;
-  onSubmit: (input: EventoInput) => Promise<void>;
+  onSubmit: (input: EventoInput, archivo?: File | null) => Promise<void>;
 };
 
 type Errores = Partial<Record<"tipo" | "fechaHora" | "titulo" | "area" | "autor", string>>;
@@ -36,6 +39,9 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
   const [area, setArea] = useState(evento?.area ?? "");
   const [descripcion, setDescripcion] = useState(evento?.descripcion ?? "");
   const [autor, setAutor] = useState(evento?.autor ?? "");
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivoError, setArchivoError] = useState<string | null>(null);
+  const [equipos, setEquipos] = useState<Array<{ value: string; label: string }>>([]);
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -58,6 +64,27 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
     };
   }, [onClose]);
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([getSthDevices(), getDpDevices()])
+      .then(([sth, dp]) => {
+        if (!active) return;
+        const sthOptions = (sth as SthDevice[]).map((d) => ({
+          value: `[STH] ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
+          label: `STH · ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
+        }));
+        const dpOptions = (dp as DpDevice[]).map((d) => ({
+          value: `[SDP] ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
+          label: `SDP · ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
+        }));
+        setEquipos([...sthOptions, ...dpOptions]);
+      })
+      .catch(() => setEquipos([]));
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const validarCampo = (campo: keyof Errores, valor: string) => {
     const errs = { ...errores };
     if (campo === "titulo" && !valor.trim()) errs.titulo = "El título es obligatorio";
@@ -79,6 +106,7 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
     if (!titulo.trim()) errs.titulo = "El título es obligatorio";
     if (!autor.trim()) errs.autor = "El autor es obligatorio";
     if (!fechaHora) errs.fechaHora = "La fecha es obligatoria";
+    if (archivoError) return;
     setErrores(errs);
     if (Object.keys(errs).length) return;
 
@@ -92,13 +120,37 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
         descripcion: descripcion.trim() || null,
         area: area.trim() || null,
         autor: autor.trim(),
-      });
+      }, archivo);
       onClose();
     } catch (err) {
       setServerError(err instanceof Error ? err.message : "No se pudo guardar");
     } finally {
       setEnviando(false);
     }
+  };
+
+  const onFileChange = (file: File | undefined) => {
+    setArchivoError(null);
+    if (!file) {
+      setArchivo(null);
+      return;
+    }
+    const allowed = new Map([
+      ["application/pdf", ["pdf"]],
+      ["application/msword", ["doc"]],
+      ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", ["docx"]],
+      ["application/vnd.ms-excel", ["xls"]],
+      ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ["xlsx"]],
+      ["image/png", ["png"]],
+      ["image/jpeg", ["jpg", "jpeg"]],
+    ]);
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (file.size > 10 * 1024 * 1024 || !allowed.has(file.type) || !allowed.get(file.type)!.includes(ext)) {
+      setArchivo(null);
+      setArchivoError("Usa PDF, Word, Excel, PNG o JPG con extensión y tipo MIME coherentes (máximo 10 MB).");
+      return;
+    }
+    setArchivo(file);
   };
 
   const field =
@@ -146,9 +198,9 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
                 onChange={(e) => setTipo(e.target.value)}
                 className={field}
               >
-                {EVENT_TYPES.map((t) => (
+                {[...(evento && LEGACY_EVENT_TYPES.includes(evento.tipo as (typeof LEGACY_EVENT_TYPES)[number]) ? [evento.tipo] : []), ...EVENT_TYPES].map((t) => (
                   <option key={t} value={t}>
-                    {TIPO_LABEL[t]}
+                    {t === "mantencion" ? "Mantención (registro histórico)" : TIPO_LABEL[t]}
                   </option>
                 ))}
               </select>
@@ -203,18 +255,24 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
                 htmlFor="ef-area"
                 className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted"
               >
-                Área / sala (opcional)
+                Equipo STH / SDP (opcional)
               </label>
               <input
                 id="ef-area"
                 type="text"
+                list="ef-equipos-lista"
                 value={area}
                 maxLength={100}
                 onChange={(e) => setArea(e.target.value)}
                 onBlur={() => validarCampo("area", area)}
-                placeholder="Ej: Esclusa Bodega"
+                placeholder="Selecciona un equipo o conserva texto histórico"
                 className={field}
               />
+              <datalist id="ef-equipos-lista">
+                {equipos.map((e) => (
+                  <option key={e.value} value={e.value} label={e.label} />
+                ))}
+              </datalist>
               {errores.area && (
                 <p className="mt-1 text-xs font-semibold text-alert">{errores.area}</p>
               )}
@@ -240,6 +298,34 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
                 <p className="mt-1 text-xs font-semibold text-alert">{errores.autor}</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="ef-archivo"
+              className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted"
+            >
+              Informe de mantenimiento (opcional)
+            </label>
+            <input
+              id="ef-archivo"
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,application/pdf"
+              onChange={(e) => onFileChange(e.target.files?.[0])}
+              className="block w-full rounded-xl border border-dashed border-line-strong bg-surface-2 px-3.5 py-3 text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-brand-800"
+            />
+            {evento?.archivo && !archivo && (
+              <a
+                href={`/api/bitacora/${evento.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1.5 block text-xs font-semibold text-brand-700 underline"
+              >
+                Ver informe actual: {evento.archivo.nombre}
+              </a>
+            )}
+            {archivo && <p className="mt-1.5 text-xs font-semibold text-brand-700">Nuevo archivo: {archivo.name}</p>}
+            {archivoError && <p className="mt-1 text-xs font-semibold text-alert">{archivoError}</p>}
           </div>
 
           <div>

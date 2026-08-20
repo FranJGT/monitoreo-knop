@@ -26,16 +26,48 @@ function filtrosUrl(f: EventoFiltros): string {
 export const getEventos = (f: EventoFiltros, signal?: AbortSignal) =>
   request<EventoBitacora[]>(filtrosUrl(f), { signal });
 
-export const createEventoRequest = (input: EventoInput) =>
-  request<EventoBitacora>("/api/bitacora", {
+function bodyFor(input: EventoInput, archivo?: File | null): BodyInit {
+  if (!archivo) return JSON.stringify(input);
+  const form = new FormData();
+  form.set("tipo", input.tipo);
+  form.set("fechaHora", input.fechaHora);
+  form.set("titulo", input.titulo);
+  form.set("descripcion", input.descripcion ?? "");
+  form.set("area", input.area ?? "");
+  form.set("autor", input.autor);
+  form.set("archivo", archivo);
+  return form;
+}
+
+function initFor(input: EventoInput, archivo?: File | null): RequestInit {
+  const body = bodyFor(input, archivo);
+  return {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    ...(archivo ? {} : { headers: { "Content-Type": "application/json" } }),
+    body,
+  };
+}
+
+export const createEventoRequest = (input: EventoInput, archivo?: File | null) =>
+  request<EventoBitacora>("/api/bitacora", {
+    ...initFor(input, archivo),
   });
 
-export const updateEventoRequest = (id: number, input: Partial<EventoInput>) =>
-  request<EventoBitacora>(`/api/bitacora/${id}`, {
+export const updateEventoRequest = (id: number, input: Partial<EventoInput>, archivo?: File | null) => {
+  if (!archivo) {
+    return request<EventoBitacora>(`/api/bitacora/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  }
+  const form = new FormData();
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined && value !== null) form.set(key, String(value));
+  }
+  form.set("archivo", archivo);
+  return request<EventoBitacora>(`/api/bitacora/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    body: form,
   });
+};

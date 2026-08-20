@@ -104,12 +104,12 @@ export default function BitacoraPage() {
   const tieneFiltros = tipo !== "todos" || textoDebounced !== "";
   const sinEventos = estado === "listo" && eventos.length === 0;
 
-  const handleSubmit = async (input: EventoInput) => {
+  const handleSubmit = async (input: EventoInput, archivo?: File | null) => {
     if (editando) {
-      await updateEventoRequest(editando.id, input);
+      await updateEventoRequest(editando.id, input, archivo);
       setToast({ message: "Evento actualizado", tone: "success" });
     } else {
-      await createEventoRequest(input);
+      await createEventoRequest(input, archivo);
       setToast({ message: "Evento registrado en la bitácora", tone: "success" });
     }
     setEditando(null);

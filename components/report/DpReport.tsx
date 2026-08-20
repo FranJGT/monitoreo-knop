@@ -15,8 +15,9 @@ import { ChartFrame } from "@/components/ChartFrame";
 import { SensorChart } from "@/components/SensorChart";
 import { StatusHero } from "@/components/kpi/StatusHero";
 import { KpiCard } from "@/components/kpi/KpiCard";
-import { SensorSelect, PresetRow } from "./controls";
+import { SensorSelect, PresetRow, ReportRangeControl } from "./controls";
 import { AlarmRow, StatRow, InfoRow } from "./parts";
+import { BatchPrintPanel } from "./BatchPrintPanel";
 import { getDpDevices, getDpKpi, getDpRango } from "@/lib/knopClient";
 import { useSensorSeries } from "@/lib/useSensorSeries";
 import { buildDpReportOption } from "@/lib/charts/dpReportOption";
@@ -120,7 +121,9 @@ export function DpReport() {
       <div className="no-print card flex flex-wrap items-end gap-4 p-4">
         <SensorSelect value={selected} onChange={setSelected} options={options} />
         <PresetRow value={series.preset} onSelect={series.setPreset} />
+        <ReportRangeControl value={series.range} onApply={series.applyRange} />
       </div>
+      <BatchPrintPanel kind="dp" devices={devices} query={series.query} currentId={selected} />
 
       <p className="text-sm text-muted">
         <span className="font-semibold text-ink">{sensorLabel}</span> · Periodo: {periodLabel}

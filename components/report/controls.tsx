@@ -1,6 +1,8 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { DateRangePopover } from "@/components/DateRangePopover";
+import type { DateRange } from "react-day-picker";
 import { PRESETS, type PresetKey } from "@/lib/aggregation";
 
 export type SelOption = { value: string; label: string; group?: string };
@@ -94,6 +96,23 @@ export function PresetRow({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+export function ReportRangeControl({
+  value,
+  onApply,
+}: {
+  value: DateRange | undefined;
+  onApply: (range: DateRange | undefined) => void;
+}) {
+  return (
+    <div className="min-w-[220px]">
+      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">
+        Rango personalizado
+      </label>
+      <DateRangePopover value={value} onApply={onApply} />
     </div>
   );
 }

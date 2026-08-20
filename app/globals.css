@@ -116,6 +116,11 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* Hoja generada para el flujo de impresión múltiple. */
+.batch-print-sheet {
+  display: none;
+}
+
 /* Animación de carga sobria (sin spinners llamativos) */
 @keyframes knop-shimmer {
   100% {
@@ -169,6 +174,38 @@ body {
   }
   .no-print {
     display: none !important;
+  }
+
+  .batch-printing .informe-root > *:not(.batch-print-sheet) {
+    display: none !important;
+  }
+  .batch-printing .batch-print-sheet {
+    display: block !important;
+    color: #0f1c14;
+  }
+  .batch-print-sheet h1 {
+    margin: 0 0 4mm;
+    font-size: 20px;
+  }
+  .batch-period {
+    margin: 0 0 6mm;
+    color: #5b6b61;
+    font-size: 11px;
+  }
+  .batch-report {
+    border: 1px solid #d6e0d9;
+    border-radius: 10px;
+    padding: 5mm;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .batch-report h2 {
+    margin: 0 0 2mm;
+    color: #09612d;
+    font-size: 16px;
+  }
+  .batch-report p {
+    margin: 1.5mm 0 0;
   }
   .print-break {
     break-after: page;
