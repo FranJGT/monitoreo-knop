@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type DateRange } from "react-day-picker";
 import {
   aggForPreset,
@@ -64,7 +64,10 @@ export function useSensorSeries<TRow>(opts: {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const controllerRef = useRef<AbortController | null>(null);
-  const query = buildQuery(preset, range, { aggFn, estimateFn, presetToRange });
+  const query = useMemo(
+    () => buildQuery(preset, range, { aggFn, estimateFn, presetToRange }),
+    [aggFn, estimateFn, presetToRange, preset, range]
+  );
 
   const load = useCallback(
     async (silent = false) => {

@@ -50,8 +50,19 @@ export default function BitacoraPage() {
   const [textoDebounced, setTextoDebounced] = useState("");
   const [formAbierto, setFormAbierto] = useState(false);
   const [editando, setEditando] = useState<EventoBitacora | null>(null);
+  const [equipoInicial, setEquipoInicial] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkHandledRef = useRef(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (linkHandledRef.current || params.get("nuevo") !== "1") return;
+    linkHandledRef.current = true;
+    setEditando(null);
+    setEquipoInicial(params.get("equipo") ?? "");
+    setFormAbierto(true);
+  }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -119,6 +130,7 @@ export default function BitacoraPage() {
 
   const handleEdit = (e: EventoBitacora) => {
     setEditando(e);
+    setEquipoInicial("");
     setFormAbierto(true);
   };
 
@@ -133,7 +145,7 @@ export default function BitacoraPage() {
       <PageHeading
         kicker="Registro de calidad"
         title="Bitácora"
-        subtitle="Eventos del laboratorio: visitas, mantenciones, incidentes y calibraciones."
+        subtitle="Registra qué se hizo, sobre qué equipo y quién lo realizó."
         right={
           <>
             <button
@@ -149,6 +161,7 @@ export default function BitacoraPage() {
               type="button"
               onClick={() => {
                 setEditando(null);
+                setEquipoInicial("");
                 setFormAbierto(true);
               }}
               className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl bg-brand-700 px-4 text-sm font-bold text-white transition-colors hover:bg-brand-800"
@@ -203,6 +216,7 @@ export default function BitacoraPage() {
               type="button"
               onClick={() => {
                 setEditando(null);
+                setEquipoInicial("");
                 setFormAbierto(true);
               }}
               className="flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-brand-700 px-5 text-sm font-bold text-white transition-colors hover:bg-brand-800"
@@ -261,6 +275,7 @@ export default function BitacoraPage() {
       {formAbierto && (
         <EntryForm
           evento={editando}
+          initialEquipment={equipoInicial}
           onClose={() => setFormAbierto(false)}
           onSubmit={handleSubmit}
         />

@@ -5,11 +5,17 @@ import { Printer, Gauge, Thermometer } from "lucide-react";
 import { PageHeading } from "@/components/PageHeading";
 import { DpReport } from "@/components/report/DpReport";
 import { SthReport } from "@/components/report/SthReport";
+import { BatchAllPrintPanel } from "@/components/report/BatchAllPrintPanel";
+import type { KpiClientParams } from "@/lib/knopClient";
 
 type Tipo = "dp" | "sth";
 
 export default function InformePage() {
   const [tipo, setTipo] = useState<Tipo>("dp");
+  const [reportQuery, setReportQuery] = useState<Omit<KpiClientParams, "id">>({
+    preset: "24h",
+    agg: 5,
+  });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -52,7 +58,13 @@ export default function InformePage() {
         </TypeTab>
       </div>
 
-      {tipo === "dp" ? <DpReport /> : <SthReport />}
+      <div className="no-print flex justify-end">
+        <BatchAllPrintPanel query={reportQuery} />
+      </div>
+
+      {tipo === "dp"
+        ? <DpReport onQueryChange={setReportQuery} />
+        : <SthReport onQueryChange={setReportQuery} />}
 
       <p className="mt-1 text-center text-xs text-faint">
         Informe generado el {generadoEl} · Knop Laboratorios · Monitoreo ambiental

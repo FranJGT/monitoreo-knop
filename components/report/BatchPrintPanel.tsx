@@ -14,7 +14,7 @@ type Props = {
   currentId: string;
 };
 
-type BatchItem = {
+export type BatchItem = {
   id: string;
   label: string;
   rows: Awaited<ReturnType<typeof getDpKpi>> | Awaited<ReturnType<typeof getSthKpi>>;
@@ -126,7 +126,7 @@ export function BatchPrintPanel({ kind, devices, query, currentId }: Props) {
   );
 }
 
-function BatchReport({ item, kind, last }: { item: BatchItem; kind: Props["kind"]; last: boolean }) {
+export function BatchReport({ item, kind, last }: { item: BatchItem; kind: Props["kind"]; last: boolean }) {
   if (kind === "dp") {
     const rows = item.rows as Awaited<ReturnType<typeof getDpKpi>>;
     const stats = summarize(rows.map((r) => r.pa));

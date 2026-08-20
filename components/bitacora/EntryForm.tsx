@@ -1,20 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, FileUp } from "lucide-react";
 import {
   EVENT_TYPES,
-  TIPO_LABEL,
+  TIPO_LABEL_PERSISTIDO,
   LEGACY_EVENT_TYPES,
   type EventoBitacora,
   type EventoInput,
 } from "@/lib/bitacoraMeta";
 import { getDpDevices, getSthDevices } from "@/lib/knopClient";
 import type { DpDevice, SthDevice } from "@/lib/knopTypes";
+import { equipmentOption, type EquipmentOption } from "@/lib/equipment";
+import { EquipmentPicker } from "./EquipmentPicker";
 
 type Props = {
   /** Si viene, es edición; si es null, creación. */
   evento: EventoBitacora | null;
+  /** Equipo enviado desde un informe; se usa al abrir "Registrar acción". */
+  initialEquipment?: string;
   onClose: () => void;
   onSubmit: (input: EventoInput, archivo?: File | null) => Promise<void>;
 };
@@ -32,21 +36,22 @@ function toInputValue(e: EventoBitacora): string {
 }
 
 /** Formulario de creación/edición en modal, con validación en blur y focus trap simple. */
-export function EntryForm({ evento, onClose, onSubmit }: Props) {
-  const [tipo, setTipo] = useState<string>(evento?.tipo ?? "visita");
+export function EntryForm({ evento, initialEquipment = "", onClose, onSubmit }: Props) {
+  const [tipo, setTipo] = useState<string>(evento?.tipo ?? "mantencion_programada");
   const [fechaHora, setFechaHora] = useState(evento ? toInputValue(evento) : nowLocalValue());
   const [titulo, setTitulo] = useState(evento?.titulo ?? "");
-  const [area, setArea] = useState(evento?.area ?? "");
+  const [area, setArea] = useState(evento?.area ?? initialEquipment);
   const [descripcion, setDescripcion] = useState(evento?.descripcion ?? "");
   const [autor, setAutor] = useState(evento?.autor ?? "");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [archivoError, setArchivoError] = useState<string | null>(null);
-  const [equipos, setEquipos] = useState<Array<{ value: string; label: string }>>([]);
+  const [equipos, setEquipos] = useState<EquipmentOption[]>([]);
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const tituloRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -69,14 +74,8 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
     Promise.all([getSthDevices(), getDpDevices()])
       .then(([sth, dp]) => {
         if (!active) return;
-        const sthOptions = (sth as SthDevice[]).map((d) => ({
-          value: `[STH] ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
-          label: `STH · ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
-        }));
-        const dpOptions = (dp as DpDevice[]).map((d) => ({
-          value: `[SDP] ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
-          label: `SDP · ${d.identificador}${d.ubicacion ? ` — ${d.ubicacion}` : ""}`,
-        }));
+        const sthOptions = (sth as SthDevice[]).map((d) => equipmentOption("sth", d));
+        const dpOptions = (dp as DpDevice[]).map((d) => equipmentOption("dp", d));
         setEquipos([...sthOptions, ...dpOptions]);
       })
       .catch(() => setEquipos([]));
@@ -133,6 +132,7 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
     setArchivoError(null);
     if (!file) {
       setArchivo(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     const allowed = new Map([
@@ -147,11 +147,19 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     if (file.size > 10 * 1024 * 1024 || !allowed.has(file.type) || !allowed.get(file.type)!.includes(ext)) {
       setArchivo(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setArchivoError("Usa PDF, Word, Excel, PNG o JPG con extensión y tipo MIME coherentes (máximo 10 MB).");
       return;
     }
     setArchivo(file);
   };
+
+  const fallbackEquipmentLabel =
+    area && !equipos.some((equipment) => equipment.value === area)
+      ? evento?.area
+        ? `Registro histórico: ${area}`
+        : `Equipo del informe: ${area}`
+      : undefined;
 
   const field =
     "w-full rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-colors hover:border-brand-300 focus:border-brand-500";
@@ -200,7 +208,7 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
               >
                 {[...(evento && LEGACY_EVENT_TYPES.includes(evento.tipo as (typeof LEGACY_EVENT_TYPES)[number]) ? [evento.tipo] : []), ...EVENT_TYPES].map((t) => (
                   <option key={t} value={t}>
-                    {t === "mantencion" ? "Mantención (registro histórico)" : TIPO_LABEL[t]}
+                    {TIPO_LABEL_PERSISTIDO[t]}
                   </option>
                 ))}
               </select>
@@ -231,7 +239,7 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
               htmlFor="ef-titulo"
               className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted"
             >
-              Título
+                Qué se hizo
             </label>
             <input
               id="ef-titulo"
@@ -241,7 +249,7 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
               maxLength={200}
               onChange={(e) => setTitulo(e.target.value)}
               onBlur={() => validarCampo("titulo", titulo)}
-              placeholder="Ej: Visita proveedor de filtros"
+              placeholder="Ej.: Calibración o cambio de filtro del sensor"
               className={field}
             />
             {errores.titulo && (
@@ -252,27 +260,19 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label
-                htmlFor="ef-area"
+                htmlFor="ef-equipo"
                 className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted"
               >
-                Equipo STH / SDP (opcional)
+                Equipos STH y SDP (opcional)
               </label>
-              <input
-                id="ef-area"
-                type="text"
-                list="ef-equipos-lista"
+              <EquipmentPicker
+                id="ef-equipo"
                 value={area}
-                maxLength={100}
-                onChange={(e) => setArea(e.target.value)}
+                options={equipos}
+                fallbackLabel={fallbackEquipmentLabel}
+                onChange={(value) => setArea(value)}
                 onBlur={() => validarCampo("area", area)}
-                placeholder="Selecciona un equipo o conserva texto histórico"
-                className={field}
               />
-              <datalist id="ef-equipos-lista">
-                {equipos.map((e) => (
-                  <option key={e.value} value={e.value} label={e.label} />
-                ))}
-              </datalist>
               {errores.area && (
                 <p className="mt-1 text-xs font-semibold text-alert">{errores.area}</p>
               )}
@@ -282,7 +282,7 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
                 htmlFor="ef-autor"
                 className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted"
               >
-                Quién registra
+                Quién realizó / registró
               </label>
               <input
                 id="ef-autor"
@@ -307,13 +307,26 @@ export function EntryForm({ evento, onClose, onSubmit }: Props) {
             >
               Informe de mantenimiento (opcional)
             </label>
-            <input
-              id="ef-archivo"
-              type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,application/pdf"
-              onChange={(e) => onFileChange(e.target.files?.[0])}
-              className="block w-full rounded-xl border border-dashed border-line-strong bg-surface-2 px-3.5 py-3 text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-brand-800"
-            />
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface-2 px-3 py-3">
+              <input
+                ref={fileInputRef}
+                id="ef-archivo"
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,application/pdf"
+                onChange={(e) => onFileChange(e.target.files?.[0])}
+                className="sr-only"
+              />
+              <label
+                htmlFor="ef-archivo"
+                className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand-50 px-3 text-xs font-bold text-brand-800 transition-colors hover:bg-brand-100"
+              >
+                <FileUp className="h-4 w-4" />
+                {archivo ? "Cambiar archivo" : "Seleccionar archivo"}
+              </label>
+              <span className="min-w-0 flex-1 truncate text-xs text-muted" title={archivo?.name}>
+                {archivo?.name ?? "PDF, Word, Excel, PNG o JPG · máximo 10 MB"}
+              </span>
+            </div>
             {evento?.archivo && !archivo && (
               <a
                 href={`/api/bitacora/${evento.id}`}

@@ -17,11 +17,15 @@ import { StatusHero } from "@/components/kpi/StatusHero";
 import { KpiCard } from "@/components/kpi/KpiCard";
 import { SensorSelect, PresetRow, ReportRangeControl } from "./controls";
 import { AlarmRow, StatRow, InfoRow } from "./parts";
-import { BatchPrintPanel } from "./BatchPrintPanel";
-import { getDpDevices, getDpKpi, getDpRango } from "@/lib/knopClient";
+import { RegisterBitacoraButton } from "./RegisterBitacoraButton";
+import { getDpDevices, getDpKpi, getDpRango, type KpiClientParams } from "@/lib/knopClient";
 import { useSensorSeries } from "@/lib/useSensorSeries";
 import { buildDpReportOption } from "@/lib/charts/dpReportOption";
-import { PRESETS } from "@/lib/aggregation";
+import {
+  EXPECTED_SAMPLE_INTERVAL_MINUTES,
+  PRESETS,
+  sampleIntervalSummary,
+} from "@/lib/aggregation";
 import type { DpDevice, RangoDp } from "@/lib/knopTypes";
 import { fmt, formatDateToMinute } from "@/lib/units";
 import {
@@ -32,8 +36,16 @@ import {
   statusFromCompliance,
   evaluateHysteresis,
 } from "@/lib/stats";
+import { equipmentValue } from "@/lib/equipment";
 
-export function DpReport() {
+type ReportProps = {
+  onQueryChange?: (query: Omit<KpiClientParams, "id">) => void;
+};
+
+/** Equipos mencionados expresamente en la solicitud de revisión de muestreo. */
+const UMA_TO_REVIEW = new Set(["UMA 1", "UMA 2", "UMA 7", "UMA 10", "UMA 11", "UMA 12"]);
+
+export function DpReport({ onQueryChange }: ReportProps) {
   const [devices, setDevices] = useState<DpDevice[]>([]);
   const [selected, setSelected] = useState("");
   const [rango, setRango] = useState<RangoDp | null>(null);
@@ -48,6 +60,11 @@ export function DpReport() {
   }, []);
 
   const series = useSensorSeries({ id: selected, fetchData: getDpKpi });
+  const reportQuery = series.query;
+
+  useEffect(() => {
+    onQueryChange?.(reportQuery);
+  }, [onQueryChange, reportQuery]);
 
   useEffect(() => {
     if (!selected) return;
@@ -66,6 +83,7 @@ export function DpReport() {
       ? `${meta.identificador} — ${meta.ubicacion}`
       : meta.identificador
     : selected;
+  const equipment = meta ? equipmentValue("dp", meta) : "";
 
   const values = useMemo(() => series.rows.map((r) => r.pa), [series.rows]);
   const range = useMemo(
@@ -80,6 +98,39 @@ export function DpReport() {
   const tr = useMemo(() => trend(values), [values]);
   const last = series.rows.length ? series.rows[series.rows.length - 1]?.pa ?? null : null;
   const status = statusFromCompliance(last, range, oor.buckets);
+  const isUmaToReview = !!meta && UMA_TO_REVIEW.has(meta.identificador.trim());
+  const sampling = useMemo(
+    () => sampleIntervalSummary(series.rows.map((row) => row.last ?? row.t)),
+    [series.rows]
+  );
+  const samplingReview = useMemo(() => {
+    if (!sampling) {
+      return {
+        tone: "text-muted",
+        label: "Sin datos suficientes",
+        detail: `Objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min`,
+      };
+    }
+    if (sampling.maxGapMinutes > 60) {
+      return {
+        tone: "text-alert",
+        label: "Revisar muestreo",
+        detail: `Mayor brecha: ${sampling.maxGapMinutes} min · objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min`,
+      };
+    }
+    if (sampling.maxGapMinutes > EXPECTED_SAMPLE_INTERVAL_MINUTES) {
+      return {
+        tone: "text-warn",
+        label: "Revisar muestreo",
+        detail: `Mayor brecha: ${sampling.maxGapMinutes} min · objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min`,
+      };
+    }
+    return {
+      tone: "text-ok",
+      label: "Muestreo en objetivo",
+      detail: `Mayor brecha: ${sampling.maxGapMinutes} min · objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min`,
+    };
+  }, [sampling]);
 
   const span = range.min != null && range.max != null ? range.max - range.min : 0;
   const lowEval =
@@ -122,9 +173,8 @@ export function DpReport() {
         <SensorSelect value={selected} onChange={setSelected} options={options} />
         <PresetRow value={series.preset} onSelect={series.setPreset} />
         <ReportRangeControl value={series.range} onApply={series.applyRange} />
+        {equipment && <RegisterBitacoraButton equipment={equipment} />}
       </div>
-      <BatchPrintPanel kind="dp" devices={devices} query={series.query} currentId={selected} />
-
       <p className="text-sm text-muted">
         <span className="font-semibold text-ink">{sensorLabel}</span> · Periodo: {periodLabel}
       </p>
@@ -215,6 +265,18 @@ export function DpReport() {
           <InfoRow icon={<Activity className="h-4 w-4" />} label="Área / Sección" value={[meta?.area, meta?.seccion].filter(Boolean).join(" · ") || "—"} />
           <InfoRow icon={<Ruler className="h-4 w-4" />} label="Rango operacional" value={rango?.descripcion || (range.min != null ? `${fmt(range.min)}–${fmt(range.max)} Pa` : "—")} />
           <InfoRow icon={<Gauge className="h-4 w-4" />} label="Tipo de rango" value={rango?.tipo || meta?.tipoRango || "—"} />
+          {isUmaToReview && (
+            <InfoRow
+              icon={<Activity className="h-4 w-4" />}
+              label="Muestreo"
+              value={
+                <span className={samplingReview.tone}>
+                  <span className="block font-semibold">{samplingReview.label}</span>
+                  <span className="block text-xs font-medium text-faint">{samplingReview.detail}</span>
+                </span>
+              }
+            />
+          )}
           <InfoRow icon={<BatteryMedium className="h-4 w-4" />} label="Batería" value="No disponible" last />
         </div>
       </div>

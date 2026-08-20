@@ -7,6 +7,13 @@ import { ymdLocal } from "./units";
 export type PresetKey = "24h" | "2d" | "3d" | "7d" | "30d" | "12m";
 export const EXPECTED_SAMPLE_INTERVAL_MINUTES = 30;
 
+export type SampleIntervalSummary = {
+  /** Mediana de los intervalos entre lecturas válidas. */
+  medianMinutes: number;
+  /** Mayor brecha observada entre lecturas válidas. */
+  maxGapMinutes: number;
+};
+
 export const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "24h", label: "24 Horas" },
   { key: "2d", label: "2 Días" },
@@ -16,8 +23,12 @@ export const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "12m", label: "12 Meses" },
 ];
 
-/** Intervalo observado entre buckets, sin fabricar ni interpolar lecturas. */
-export function observedIntervalMinutes(timestamps: string[]): number | null {
+/**
+ * Resume los intervalos observados sin fabricar ni interpolar lecturas.
+ * La mayor brecha es necesaria para revisar las UMA indicadas, pues una
+ * mediana normal puede ocultar una sola pausa superior a una hora.
+ */
+export function sampleIntervalSummary(timestamps: string[]): SampleIntervalSummary | null {
   const values = timestamps
     .map((t) => Date.parse(String(t).replace(" ", "T")))
     .filter(Number.isFinite)
@@ -26,7 +37,15 @@ export function observedIntervalMinutes(timestamps: string[]): number | null {
   const deltas = values.slice(1).map((v, i) => (v - values[i]) / 60000).filter((v) => v > 0);
   if (!deltas.length) return null;
   deltas.sort((a, b) => a - b);
-  return Math.round(deltas[Math.floor(deltas.length / 2)]);
+  return {
+    medianMinutes: Math.round(deltas[Math.floor(deltas.length / 2)]),
+    maxGapMinutes: Math.round(deltas[deltas.length - 1]),
+  };
+}
+
+/** Intervalo típico observado entre buckets, sin fabricar ni interpolar lecturas. */
+export function observedIntervalMinutes(timestamps: string[]): number | null {
+  return sampleIntervalSummary(timestamps)?.medianMinutes ?? null;
 }
 
 export const AGG_MAP: Record<PresetKey, number> = {

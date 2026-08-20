@@ -108,7 +108,7 @@ export function validarEvento(input: EventoInput): EventoValidado {
   if (!autor) throw new Error("El autor es obligatorio");
   if (autor.length > MAX_AUTOR) throw new Error(`Autor máximo ${MAX_AUTOR} caracteres`);
   const area = clean(input.area);
-  if (area && area.length > MAX_AREA) throw new Error(`Área máxima ${MAX_AREA} caracteres`);
+  if (area && area.length > MAX_AREA) throw new Error(`Equipo máximo ${MAX_AREA} caracteres`);
   return {
     tipo: input.tipo,
     fechaHora: normalizeFechaHora(input.fechaHora),

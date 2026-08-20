@@ -8,8 +8,8 @@ import { StatusHero } from "@/components/kpi/StatusHero";
 import { KpiCard } from "@/components/kpi/KpiCard";
 import { SensorSelect, PresetRow, ReportRangeControl } from "./controls";
 import { AlarmRow, StatRow, InfoRow, PanelSubhead } from "./parts";
-import { BatchPrintPanel } from "./BatchPrintPanel";
-import { getSthDevices, getSthKpi, getSthRango } from "@/lib/knopClient";
+import { RegisterBitacoraButton } from "./RegisterBitacoraButton";
+import { getSthDevices, getSthKpi, getSthRango, type KpiClientParams } from "@/lib/knopClient";
 import { useSensorSeries } from "@/lib/useSensorSeries";
 import { buildSthOption } from "@/lib/charts/sthOption";
 import {
@@ -17,8 +17,6 @@ import {
   aggForPresetSth,
   estimateAggFromDatesSth,
   presetRangeYmd,
-  EXPECTED_SAMPLE_INTERVAL_MINUTES,
-  observedIntervalMinutes,
 } from "@/lib/aggregation";
 import type { SthDevice, RangoSth } from "@/lib/knopTypes";
 import { fmt, formatDateToMinute } from "@/lib/units";
@@ -35,10 +33,15 @@ import {
   type Range,
   type SensorStatus,
 } from "@/lib/stats";
+import { equipmentValue } from "@/lib/equipment";
 
 const RANK: Record<SensorStatus, number> = { normal: 0, advertencia: 1, alerta: 2 };
 
-export function SthReport() {
+type ReportProps = {
+  onQueryChange?: (query: Omit<KpiClientParams, "id">) => void;
+};
+
+export function SthReport({ onQueryChange }: ReportProps) {
   const [devices, setDevices] = useState<SthDevice[]>([]);
   const [selected, setSelected] = useState("");
   const [rango, setRango] = useState<RangoSth | null>(null);
@@ -59,6 +62,11 @@ export function SthReport() {
     estimateAgg: estimateAggFromDatesSth,
     presetToRange: presetRangeYmd,
   });
+  const reportQuery = series.query;
+
+  useEffect(() => {
+    onQueryChange?.(reportQuery);
+  }, [onQueryChange, reportQuery]);
 
   useEffect(() => {
     if (!selected) return;
@@ -73,6 +81,7 @@ export function SthReport() {
 
   const meta = devices.find((d) => d.name === selected) ?? null;
   const sensorLabel = meta?.name || selected;
+  const equipment = meta ? equipmentValue("sth", meta) : "";
   // `null` = agg por defecto del servidor (~5 min); se usa 5 para estimar minutos fuera.
   const agg = series.query.agg ?? 5;
 
@@ -99,10 +108,6 @@ export function SthReport() {
   const last = series.rows.length ? series.rows[series.rows.length - 1] : null;
   const lastTemp = last?.tempC ?? null;
   const lastHum = last?.hum ?? null;
-  const observedSampleMinutes = useMemo(
-    () => observedIntervalMinutes(series.rows.map((r) => r.t)),
-    [series.rows]
-  );
 
   const tempStatus = statusFromCompliance(lastTemp, tempRange, tempOor.buckets);
   const humStatus = statusFromCompliance(lastHum, humRange, humOor.buckets);
@@ -146,9 +151,8 @@ export function SthReport() {
         <SensorSelect value={selected} onChange={setSelected} options={options} />
         <PresetRow value={series.preset} onSelect={series.setPreset} />
         <ReportRangeControl value={series.range} onApply={series.applyRange} />
+        {equipment && <RegisterBitacoraButton equipment={equipment} />}
       </div>
-      <BatchPrintPanel kind="sth" devices={devices} query={series.query} currentId={selected} />
-
       <p className="text-sm text-muted">
         <span className="font-semibold text-ink">{sensorLabel}</span> · Periodo: {periodLabel}
       </p>
@@ -162,8 +166,8 @@ export function SthReport() {
           icon={<Thermometer className="h-4 w-4" />}
           trend={tempTrend}
           sub={`Prom ${fmt(tempStats.avg, 1)} °C`}
-          valueClassName="text-lg font-semibold"
-          subClassName="text-2xl font-extrabold"
+          valueClassName="text-base font-medium"
+          subClassName="mt-1 text-2xl font-black !text-brand-900"
         />
         <KpiCard
           label="Humedad"
@@ -172,8 +176,6 @@ export function SthReport() {
           icon={<Droplets className="h-4 w-4" />}
           trend={humTrend}
           sub={`Prom ${fmt(humStats.avg, 1)} %`}
-          valueClassName="text-lg font-semibold"
-          subClassName="text-2xl font-extrabold"
         />
         <KpiCard
           label="T° mín / máx"
@@ -252,15 +254,6 @@ export function SthReport() {
           <InfoRow icon={<Hash className="h-4 w-4" />} label="Identificador" value={meta?.identificador || "—"} />
           <InfoRow icon={<MapPin className="h-4 w-4" />} label="Ubicación" value={meta?.ubicacion || "—"} />
           <InfoRow icon={<Activity className="h-4 w-4" />} label="Tipo de rango" value={rango?.tipo || "—"} />
-          <InfoRow
-            icon={<Activity className="h-4 w-4" />}
-            label="Muestreo"
-            value={
-              observedSampleMinutes == null
-                ? `Objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min · sin datos suficientes`
-                : `${observedSampleMinutes} min observado · objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min`
-            }
-          />
           <InfoRow icon={<Thermometer className="h-4 w-4" />} label="Rango temperatura" value={tempRange.min != null ? `${tempRange.min}–${tempRange.max} °C` : "—"} />
           <InfoRow icon={<Droplets className="h-4 w-4" />} label="Rango humedad" value={humRange.min != null ? `${humRange.min}–${humRange.max} %` : "—"} />
           <InfoRow

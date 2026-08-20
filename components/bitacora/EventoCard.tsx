@@ -51,7 +51,7 @@ type Props = {
   onEdit: (e: EventoBitacora) => void;
 };
 
-/** Item de la timeline: hora, tipo, título, área, detalle y autor. */
+/** Item de la timeline: hora, tipo, acción, equipo, detalle y responsable. */
 export function EventoCard({ evento, onEdit }: Props) {
   const s = TIPO_STYLE[evento.tipo];
   const Icon = s.icon;

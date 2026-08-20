@@ -24,7 +24,7 @@ const CARDS = [
     href: "/bitacora",
     icon: NotebookPen,
     title: "Bitácora",
-    desc: "Registro de eventos del laboratorio: visitas, mantenciones, incidentes y calibraciones.",
+    desc: "Registro de acciones sobre sensores: mantenciones, calibraciones y otros eventos.",
   },
 ];
 

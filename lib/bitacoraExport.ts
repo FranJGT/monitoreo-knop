@@ -12,7 +12,7 @@ export function exportEventosXlsx(eventos: EventoBitacora[]) {
     fecha: formatExcelTime(e.fechaHora),
     tipo: TIPO_LABEL_PERSISTIDO[e.tipo],
     titulo: e.titulo,
-    area: e.area ?? "",
+    equipo: e.area ?? "",
     descripcion: e.descripcion ?? "",
     autor: e.autor,
   }));
@@ -21,7 +21,7 @@ export function exportEventosXlsx(eventos: EventoBitacora[]) {
     "fecha",
     "tipo",
     "titulo",
-    "area",
+    "equipo",
     "descripcion",
     "autor",
   ]);
