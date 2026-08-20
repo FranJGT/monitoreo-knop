@@ -9,12 +9,12 @@ import { SthReport } from "@/components/report/SthReport";
 type Tipo = "dp" | "sth";
 
 export default function InformePage() {
-  const [tipo, setTipo] = useState<Tipo>(() =>
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("tipo") === "sth"
-      ? "sth"
-      : "dp"
-  );
+  const [tipo, setTipo] = useState<Tipo>("dp");
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTipo(new URLSearchParams(window.location.search).get("tipo") === "sth" ? "sth" : "dp");
+  }, []);
 
   // La fecha de generación se calcula solo en el cliente tras el montaje:
   // evita el desajuste de hidratación (los segundos difieren entre SSR y cliente).

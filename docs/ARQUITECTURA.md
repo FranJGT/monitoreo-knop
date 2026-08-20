@@ -67,18 +67,34 @@ Navegador (React) → /api/bitacora/* → MySQL (pool en lib/db.ts, queries para
 | `/api/bitacora` | GET | Lista (filtros `tipo`, `texto`, `desde`, `hasta`; máx. 500, más recientes primero) |
 | `/api/bitacora` | POST | Crear evento (validación server-side en `lib/bitacora.ts`) |
 | `/api/bitacora/[id]` | PATCH | Editar evento (merge con estado actual) |
+| `/api/bitacora/[id]` | GET | Consultar/descargar el informe de mantenimiento asociado |
 
 Reglas de negocio:
 
 - **Sin DELETE** por diseño: es un registro de calidad; solo se edita.
 - `fecha_hora` se guarda en hora local de Chile como `DATETIME` (`YYYY-MM-DD HH:mm:ss`);
   el formulario envía `datetime-local` y `normalizeFechaHora()` lo normaliza.
-- Validación server-side en `lib/bitacora.ts`: tipo dentro de `EVENT_TYPES`, título y autor
+- Validación server-side en `lib/bitacora.ts`: tipo dentro de los tipos nuevos o el tipo histórico `mantencion`, título y autor
   obligatorios, límites de longitud (título 200, autor/área 100).
 - Conexión por variables de entorno (`MYSQL_*`, ver `.env.example`); pool único en
   `globalThis` para evitar fugas de conexión con el hot-reload de Next (`lib/db.ts`).
 - Tipos compartidos cliente/servidor en `lib/bitacoraMeta.ts`; cliente en
   `lib/bitacoraClient.ts`; exportación Excel en `lib/bitacoraExport.ts` (patrón `exportXlsx`).
+- Los adjuntos usan metadatos en `bitacora_archivos` y contenido fuera de MySQL mediante
+  el contrato `FileStorage` (`lib/bitacoraStorage.ts`). El adaptador local es sólo para
+  desarrollo; producción debe elegir un volumen persistente o proveedor de objetos.
+
+## Verificación de equipos y observaciones operativas
+
+La fuente upstream consultada el 19-08-2026 devuelve `BCN - Bodega Cannabis` en
+`device.php` (STH). En la misma consulta `sdp/deviceDP.php` no devuelve ningún
+registro con Cannabis/Bodega Cannabis en identificador, ubicación, área o sección;
+por ello el dashboard muestra Cannabis como STH y no inventa un SDP asociado.
+
+El reporte de comparación contiene datos de `UMA 1`, `2`, `7`, `10`, `11` y `12`,
+pero el código no contiene una regla operativa para determinar si están a más de
+una hora. La aplicación no agrega una funcionalidad UMA ni altera esos datos; la
+observación requiere definición operacional y/o fuente adicional del cliente.
 
 ## Gráficos
 

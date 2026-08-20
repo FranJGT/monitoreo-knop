@@ -1,18 +1,28 @@
 "use client";
 
 import { MapPin, User, Pencil, Users, Wrench, AlertTriangle, BadgeCheck, NotebookPen } from "lucide-react";
-import { TIPO_LABEL, type EventoTipo, type EventoBitacora } from "@/lib/bitacoraMeta";
+import { TIPO_LABEL_PERSISTIDO, type EventoTipoPersistido, type EventoBitacora } from "@/lib/bitacoraMeta";
 import { formatDateToMinute } from "@/lib/units";
 
 /** Icono y clases por tipo de evento (badge + punto de la timeline). */
 export const TIPO_STYLE: Record<
-  EventoTipo,
+  EventoTipoPersistido,
   { icon: typeof Users; badge: string; dot: string }
 > = {
   visita: {
     icon: Users,
     badge: "bg-info-soft text-info",
     dot: "bg-info",
+  },
+  mantencion_programada: {
+    icon: Wrench,
+    badge: "bg-brand-50 text-brand-700",
+    dot: "bg-brand-700",
+  },
+  mantencion_correctiva: {
+    icon: Wrench,
+    badge: "bg-warn-soft text-warn",
+    dot: "bg-warn",
   },
   mantencion: {
     icon: Wrench,
@@ -61,7 +71,7 @@ export function EventoCard({ evento, onEdit }: Props) {
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide ${s.badge}`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {TIPO_LABEL[evento.tipo]}
+                {TIPO_LABEL_PERSISTIDO[evento.tipo]}
               </span>
               <time
                 dateTime={evento.fechaHora}
@@ -83,6 +93,17 @@ export function EventoCard({ evento, onEdit }: Props) {
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted">
                 {evento.descripcion}
               </p>
+            )}
+            {evento.archivo && (
+              <a
+                href={`/api/bitacora/${evento.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 underline underline-offset-2"
+              >
+                <NotebookPen className="h-3.5 w-3.5" />
+                Ver informe: {evento.archivo.nombre}
+              </a>
             )}
           </div>
 

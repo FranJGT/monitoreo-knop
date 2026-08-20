@@ -1,9 +1,9 @@
 "use client";
 
 import { Search, RotateCcw } from "lucide-react";
-import { EVENT_TYPES, TIPO_LABEL, type EventoTipo } from "@/lib/bitacoraMeta";
+import { ALL_EVENT_TYPES, TIPO_LABEL_PERSISTIDO, type EventoTipoPersistido } from "@/lib/bitacoraMeta";
 
-export type TipoFiltro = EventoTipo | "todos";
+export type TipoFiltro = EventoTipoPersistido | "todos";
 
 type Props = {
   tipo: TipoFiltro;
@@ -14,7 +14,7 @@ type Props = {
   tieneFiltros: boolean;
 };
 
-const CHIPS: TipoFiltro[] = ["todos", ...EVENT_TYPES];
+const CHIPS: TipoFiltro[] = ["todos", ...ALL_EVENT_TYPES];
 
 /** Filtros de la bitácora: chips por tipo + búsqueda por texto. */
 export function FilterBar({ tipo, onTipo, texto, onTexto, onReset, tieneFiltros }: Props) {
@@ -40,7 +40,7 @@ export function FilterBar({ tipo, onTipo, texto, onTexto, onReset, tieneFiltros 
                   : "border-line-strong bg-surface text-ink hover:border-brand-300 hover:bg-brand-50",
               ].join(" ")}
             >
-              {t === "todos" ? "Todos" : TIPO_LABEL[t]}
+            {t === "todos" ? "Todos" : TIPO_LABEL_PERSISTIDO[t]}
             </button>
           );
         })}

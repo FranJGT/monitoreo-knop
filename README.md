@@ -22,7 +22,9 @@ TypeScript, Tailwind CSS 4 y [ECharts](https://echarts.apache.org).
   con agregación automática de datos según la ventana consultada.
 - **Bitácora de eventos** — registro de calidad (visitas, mantenciones, incidentes,
   calibraciones y eventos genéricos) con timeline, filtros, edición sin borrado y
-  exportación a Excel. Persistencia en MySQL.
+  exportación a Excel. Persistencia de eventos y metadatos en MySQL.
+- **Informes de mantenimiento adjuntos** — validación de PDF/Office/imagen,
+  almacenamiento desacoplado mediante `FileStorage` y consulta desde el evento.
 
 ## Arquitectura
 
@@ -43,6 +45,15 @@ Navegador (React) → /api/bitacora/* → MySQL (tabla bitacora_eventos)
 Para el detalle de endpoints, reglas de negocio (conversión de unidades,
 agregación, estadística y alarmas) y organización de gráficos, ver
 [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md).
+
+### Adjuntos y despliegue
+
+Los archivos de mantenimiento no se guardan en MySQL. `lib/bitacoraStorage.ts`
+define el contrato `FileStorage` y entrega un adaptador local privado para
+desarrollo (`BITACORA_STORAGE_DIR`, por defecto `storage/bitacora`). Antes de
+producción, el encargado técnico debe elegir y configurar un volumen persistente
+o un adaptador de objetos (S3, MinIO, R2 u otro); esa decisión no cambia la
+lógica de eventos ni sus metadatos.
 
 ### Estructura del proyecto
 
@@ -126,6 +137,12 @@ server {
 El servidor necesita salida a internet para consumir la API de Softronica
 (`newenergy.softronica.cl`) y acceso de red al MySQL donde vive `bitacora_eventos`.
 
+Aunque el proyecto conserva `netlify.toml` y una referencia histórica a Netlify,
+ese destino no está confirmado en este workspace. En cualquier entorno
+serverless, el almacenamiento local de adjuntos no es persistente: antes de
+publicar hay que elegir un volumen persistente o un proveedor de objetos y
+configurar el adaptador `FileStorage`.
+
 ## Scripts disponibles
 
 ```bash
@@ -150,6 +167,7 @@ node scripts/compare-knop.mjs   # genera docs/reporte-comparacion.md
 
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — arquitectura y reglas de negocio.
 - [`docs/GUIA-BITACORA.md`](docs/GUIA-BITACORA.md) — guía de uso de la bitácora (registrar, editar, filtrar, exportar).
+- [`docs/OPCIONES-ALMACENAMIENTO-PDF.md`](docs/OPCIONES-ALMACENAMIENTO-PDF.md) — contrato y comparación de alternativas para guardar informes PDF.
 - [`docs/database/SCHEMA.md`](docs/database/SCHEMA.md) — estado actual del esquema de base de datos.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.
 - [`docs/documentacion-sistema.pdf`](docs/documentacion-sistema.pdf) — documentación del sistema.

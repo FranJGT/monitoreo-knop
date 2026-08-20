@@ -10,7 +10,7 @@
 ## Descripción
 
 Nueva tabla para la bitácora de eventos del dashboard de monitoreo. Registra
-visitas, mantenciones, incidentes, calibraciones y eventos genéricos de las
+visitas, mantenciones programadas/correctivas, incidentes, calibraciones y eventos genéricos de las
 áreas controladas, con fecha, responsable y detalle. Es un registro de calidad:
 **no se permite borrar** registros (la API solo expone crear, listar y editar).
 
@@ -30,7 +30,7 @@ sistema de monitoreo; el usuario de la aplicación solo requiere permisos
 | Columna | Tipo | Nullable | Default | Descripción |
 |---------|------|----------|---------|-------------|
 | id | BIGINT UNSIGNED | NO | AUTO_INCREMENT | Identificador único |
-| tipo_evento | VARCHAR(30) | NO | NULL | visita \| mantencion \| incidente \| calibracion \| otro |
+| tipo_evento | VARCHAR(30) | NO | NULL | visita \| mantencion_programada \| mantencion_correctiva \| mantencion (legado) \| incidente \| calibracion \| otro |
 | fecha_hora | DATETIME | NO | NULL | Fecha y hora en que ocurrió el evento (hora local Chile) |
 | titulo | VARCHAR(200) | NO | NULL | Título corto del evento |
 | descripcion | TEXT | SÍ | NULL | Detalle o contexto |
@@ -67,6 +67,34 @@ CREATE TABLE bitacora_eventos (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+### Tabla: `bitacora_archivos`
+
+Los informes de mantenimiento no se guardan como BLOB ni base64 en MySQL. La
+tabla conserva sólo metadatos y una clave de almacenamiento. En desarrollo, la
+clave apunta a `BITACORA_STORAGE_DIR` (por defecto `storage/bitacora`); en
+producción debe montarse como volumen persistente o conectarse un adaptador de
+almacenamiento de objetos.
+
+```sql
+CREATE TABLE bitacora_archivos (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  evento_id       BIGINT UNSIGNED NOT NULL,
+  clave           VARCHAR(500) NOT NULL,
+  nombre_original VARCHAR(255) NOT NULL,
+  mime_type       VARCHAR(120) NOT NULL,
+  tamano          INT UNSIGNED NOT NULL,
+  subido_por      VARCHAR(100) NOT NULL,
+  creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_archivo_evento (evento_id),
+  CONSTRAINT fk_archivo_evento FOREIGN KEY (evento_id) REFERENCES bitacora_eventos(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+Validación de aplicación: PDF, DOC/DOCX, XLS/XLSX, PNG o JPG; extensión y MIME
+deben coincidir; tamaño máximo 10 MB; cada archivo recibe una clave UUID única.
+
 ### DOWN (Rollback)
 
 ```sql
@@ -78,6 +106,7 @@ DROP TABLE IF EXISTS bitacora_eventos;
 - [x] Backend: nueva ruta `/api/bitacora` (GET, POST) y `/api/bitacora/[id]` (PATCH)
 - [x] Frontend: nueva página `/bitacora` (timeline + filtros + formulario + exportación Excel)
 - [ ] APIs externas: sin impacto (la bitácora no toca los endpoints de Softronica)
+- [ ] Almacenamiento externo: requiere un volumen persistente o adaptar `FileStorage` a un proveedor de objetos en producción.
 - [ ] Jobs/Cron: sin impacto
 
 ## Notas Adicionales

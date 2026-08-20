@@ -1,5 +1,5 @@
 import { exportRowsToXlsx, safeFileName } from "./exportXlsx";
-import { TIPO_LABEL, type EventoBitacora } from "./bitacoraMeta";
+import { TIPO_LABEL_PERSISTIDO, type EventoBitacora } from "./bitacoraMeta";
 import { formatExcelTime, ymdLocal, ymdToDmy } from "./units";
 
 /**
@@ -10,7 +10,7 @@ export function exportEventosXlsx(eventos: EventoBitacora[]) {
   if (!eventos.length) return;
   const rows = eventos.map((e) => ({
     fecha: formatExcelTime(e.fechaHora),
-    tipo: TIPO_LABEL[e.tipo],
+    tipo: TIPO_LABEL_PERSISTIDO[e.tipo],
     titulo: e.titulo,
     area: e.area ?? "",
     descripcion: e.descripcion ?? "",

@@ -15,6 +15,8 @@ export function KpiCard({
   sub,
   icon,
   trend,
+  valueClassName,
+  subClassName,
 }: {
   label: string;
   value: string;
@@ -22,6 +24,8 @@ export function KpiCard({
   sub?: string;
   icon?: ReactNode;
   trend?: Trend;
+  valueClassName?: string;
+  subClassName?: string;
 }) {
   const t = trend ? TREND_META[trend] : null;
   const TIcon = t?.icon;
@@ -40,12 +44,12 @@ export function KpiCard({
         )}
       </div>
       <div className="tnum flex items-baseline gap-1">
-        <span className="text-2xl font-extrabold leading-tight text-brand-900">
+        <span className={`leading-tight text-brand-900 ${valueClassName ?? "text-2xl font-extrabold"}`}>
           {value}
         </span>
         {unit && <span className="text-sm font-semibold text-muted">{unit}</span>}
       </div>
-      {sub && <div className="truncate text-xs text-faint">{sub}</div>}
+      {sub && <div className={`truncate text-faint ${subClassName ?? "text-xs"}`}>{sub}</div>}
     </div>
   );
 }

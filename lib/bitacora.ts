@@ -2,19 +2,22 @@ import "server-only";
 import { query } from "./db";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import {
+  ALL_EVENT_TYPES,
   EVENT_TYPES,
-  type EventoTipo,
+  type EventoTipoPersistido,
   type EventoBitacora,
   type EventoInput,
   type EventoFiltros,
 } from "./bitacoraMeta";
+import { localFileStorage, type StoredFile } from "./bitacoraStorage";
 
-export { EVENT_TYPES };
-export type { EventoTipo, EventoBitacora, EventoInput, EventoFiltros };
+export { ALL_EVENT_TYPES, EVENT_TYPES };
+export type { EventoTipoPersistido as EventoTipo, EventoBitacora, EventoInput, EventoFiltros };
 
 const MAX_TITULO = 200;
 const MAX_AUTOR = 100;
 const MAX_AREA = 100;
+let attachmentTableAvailable: boolean | null = null;
 
 interface EventoRow extends RowDataPacket {
   id: number;
@@ -26,6 +29,11 @@ interface EventoRow extends RowDataPacket {
   autor: string;
   creado_en: Date;
   actualizado_en: Date;
+  archivo_id: number | null;
+  archivo_nombre: string | null;
+  archivo_mime: string | null;
+  archivo_tamano: number | null;
+  archivo_creado_en: Date | null;
 }
 
 /**
@@ -41,8 +49,8 @@ function dbDateToString(d: Date): string {
 function toEvento(r: EventoRow): EventoBitacora {
   return {
     id: r.id,
-    tipo: (EVENT_TYPES as readonly string[]).includes(r.tipo_evento)
-      ? (r.tipo_evento as EventoTipo)
+    tipo: (ALL_EVENT_TYPES as readonly string[]).includes(r.tipo_evento)
+      ? (r.tipo_evento as EventoTipoPersistido)
       : "otro",
     fechaHora: dbDateToString(r.fecha_hora),
     titulo: r.titulo,
@@ -51,6 +59,16 @@ function toEvento(r: EventoRow): EventoBitacora {
     autor: r.autor,
     creadoEn: dbDateToString(r.creado_en),
     actualizadoEn: dbDateToString(r.actualizado_en),
+    archivo:
+      r.archivo_id == null
+        ? null
+        : {
+            id: r.archivo_id,
+            nombre: r.archivo_nombre ?? "informe-mantenimiento",
+            mime: r.archivo_mime ?? "application/octet-stream",
+            tamano: r.archivo_tamano ?? 0,
+            creadoEn: r.archivo_creado_en ? dbDateToString(r.archivo_creado_en) : "",
+          },
   };
 }
 
@@ -71,7 +89,7 @@ function clean(s: string | null | undefined): string | null {
 }
 
 export type EventoValidado = {
-  tipo: EventoTipo;
+  tipo: EventoTipoPersistido;
   fechaHora: string;
   titulo: string;
   descripcion: string | null;
@@ -80,7 +98,7 @@ export type EventoValidado = {
 };
 
 export function validarEvento(input: EventoInput): EventoValidado {
-  if (!(EVENT_TYPES as readonly string[]).includes(input.tipo)) {
+  if (!(ALL_EVENT_TYPES as readonly string[]).includes(input.tipo)) {
     throw new Error("Tipo de evento no válido");
   }
   const titulo = clean(input.titulo);
@@ -124,32 +142,63 @@ export async function listEventos(f: EventoFiltros): Promise<EventoBitacora[]> {
     params.push(`${f.hasta} 23:59:59`);
   }
 
-  const sql = `SELECT id, tipo_evento, fecha_hora, titulo, descripcion, area, autor,
-                      creado_en, actualizado_en
-               FROM bitacora_eventos
+  const hasAttachments = await canUseAttachmentTable();
+  const sql = hasAttachments
+    ? `SELECT e.id, e.tipo_evento, e.fecha_hora, e.titulo, e.descripcion, e.area, e.autor,
+                      e.creado_en, e.actualizado_en,
+                      a.id AS archivo_id, a.nombre_original AS archivo_nombre,
+                      a.mime_type AS archivo_mime, a.tamano AS archivo_tamano,
+                      a.creado_en AS archivo_creado_en
+               FROM bitacora_eventos e
+               LEFT JOIN bitacora_archivos a ON a.evento_id = e.id
                ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-               ORDER BY fecha_hora DESC, id DESC
+               ORDER BY e.fecha_hora DESC, e.id DESC
+               LIMIT 500`
+    : `SELECT e.id, e.tipo_evento, e.fecha_hora, e.titulo, e.descripcion, e.area, e.autor,
+                      e.creado_en, e.actualizado_en
+               FROM bitacora_eventos e
+               ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+               ORDER BY e.fecha_hora DESC, e.id DESC
                LIMIT 500`;
   const rows = (await query(sql, params)) as EventoRow[];
   return rows.map(toEvento);
 }
 
-export async function createEvento(input: EventoInput): Promise<EventoBitacora> {
+export async function createEvento(input: EventoInput, archivo?: File | null): Promise<EventoBitacora> {
   const v = validarEvento(input);
+  if (archivo && !(await canUseAttachmentTable())) {
+    throw new Error("Falta aplicar la migración 002_bitacora_archivos antes de anexar informes.");
+  }
   const res = (await query(
     `INSERT INTO bitacora_eventos (tipo_evento, fecha_hora, titulo, descripcion, area, autor)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [v.tipo, v.fechaHora, v.titulo, v.descripcion, v.area, v.autor]
   )) as ResultSetHeader;
-  const creado = await getEvento(res.insertId);
+  const id = Number(res.insertId);
+  if (archivo) {
+    let stored: StoredFile | null = null;
+    try {
+      stored = await localFileStorage.save(id, archivo);
+      await insertArchivo(id, stored, v.autor);
+    } catch (e) {
+      if (stored) await localFileStorage.delete(stored.clave);
+      await query("DELETE FROM bitacora_eventos WHERE id = ?", [id]);
+      throw e;
+    }
+  }
+  const creado = await getEvento(id);
   if (!creado) throw new Error("No se pudo leer el evento recién creado");
   return creado;
 }
 
 export async function updateEvento(
   id: number,
-  input: Partial<EventoInput>
+  input: Partial<EventoInput>,
+  archivo?: File | null
 ): Promise<EventoBitacora | null> {
+  if (archivo && !(await canUseAttachmentTable())) {
+    throw new Error("Falta aplicar la migración 002_bitacora_archivos antes de anexar informes.");
+  }
   const actual = await getEvento(id);
   if (!actual) return null;
   const merged: EventoInput = {
@@ -167,15 +216,99 @@ export async function updateEvento(
      WHERE id = ?`,
     [v.tipo, v.fechaHora, v.titulo, v.descripcion, v.area, v.autor, id]
   );
+  if (archivo) {
+    const previous = await getArchivoRecord(id);
+    const stored = await localFileStorage.save(id, archivo);
+    try {
+      await insertArchivo(id, stored, v.autor);
+      if (previous) await localFileStorage.delete(previous.clave);
+    } catch (e) {
+      await localFileStorage.delete(stored.clave);
+      throw e;
+    }
+  }
   return getEvento(id);
 }
 
 async function getEvento(id: number): Promise<EventoBitacora | null> {
+  const hasAttachments = await canUseAttachmentTable();
   const rows = (await query(
-    `SELECT id, tipo_evento, fecha_hora, titulo, descripcion, area, autor,
-            creado_en, actualizado_en
-     FROM bitacora_eventos WHERE id = ?`,
+    hasAttachments
+      ? `SELECT e.id, e.tipo_evento, e.fecha_hora, e.titulo, e.descripcion, e.area, e.autor,
+            e.creado_en, e.actualizado_en,
+            a.id AS archivo_id, a.nombre_original AS archivo_nombre,
+            a.mime_type AS archivo_mime, a.tamano AS archivo_tamano,
+            a.creado_en AS archivo_creado_en
+     FROM bitacora_eventos e
+     LEFT JOIN bitacora_archivos a ON a.evento_id = e.id
+     WHERE e.id = ?`
+      : `SELECT e.id, e.tipo_evento, e.fecha_hora, e.titulo, e.descripcion, e.area, e.autor,
+            e.creado_en, e.actualizado_en
+     FROM bitacora_eventos e
+     WHERE e.id = ?`,
     [id]
   )) as EventoRow[];
   return rows.length ? toEvento(rows[0]) : null;
+}
+
+type ArchivoRow = RowDataPacket & {
+  id: number;
+  evento_id: number;
+  clave: string;
+  nombre_original: string;
+  mime_type: string;
+  tamano: number;
+  subido_por: string;
+};
+
+async function insertArchivo(eventoId: number, stored: StoredFile, autor: string) {
+  await query(
+    `INSERT INTO bitacora_archivos
+       (evento_id, clave, nombre_original, mime_type, tamano, subido_por)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       clave = VALUES(clave), nombre_original = VALUES(nombre_original),
+       mime_type = VALUES(mime_type), tamano = VALUES(tamano),
+       subido_por = VALUES(subido_por), actualizado_en = CURRENT_TIMESTAMP`,
+    [eventoId, stored.clave, stored.nombre, stored.mime, stored.tamano, autor]
+  );
+}
+
+async function getArchivoRecord(eventoId: number): Promise<ArchivoRow | null> {
+  if (!(await canUseAttachmentTable())) return null;
+  const rows = (await query(
+    `SELECT id, evento_id, clave, nombre_original, mime_type, tamano, subido_por
+     FROM bitacora_archivos WHERE evento_id = ?`,
+    [eventoId]
+  )) as ArchivoRow[];
+  return rows[0] ?? null;
+}
+
+async function canUseAttachmentTable(): Promise<boolean> {
+  if (attachmentTableAvailable !== null) return attachmentTableAvailable;
+  try {
+    await query("SELECT 1 FROM bitacora_archivos LIMIT 1");
+    attachmentTableAvailable = true;
+    return true;
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code !== "ER_NO_SUCH_TABLE") throw e;
+    attachmentTableAvailable = false;
+    return false;
+  }
+}
+
+export async function getArchivoDownload(
+  eventoId: number
+): Promise<{ eventoId: number; nombre: string; mime: string; tamano: number; contenido: Buffer } | null> {
+  const r = await getArchivoRecord(eventoId);
+  if (!r) return null;
+  const contenido = await localFileStorage.read(r.clave);
+  return {
+    eventoId,
+    nombre: r.nombre_original,
+    mime: r.mime_type,
+    tamano: r.tamano,
+    contenido,
+  };
 }

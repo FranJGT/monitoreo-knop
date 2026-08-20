@@ -6,8 +6,9 @@ import { ChartFrame } from "@/components/ChartFrame";
 import { SensorChart } from "@/components/SensorChart";
 import { StatusHero } from "@/components/kpi/StatusHero";
 import { KpiCard } from "@/components/kpi/KpiCard";
-import { SensorSelect, PresetRow } from "./controls";
+import { SensorSelect, PresetRow, ReportRangeControl } from "./controls";
 import { AlarmRow, StatRow, InfoRow, PanelSubhead } from "./parts";
+import { BatchPrintPanel } from "./BatchPrintPanel";
 import { getSthDevices, getSthKpi, getSthRango } from "@/lib/knopClient";
 import { useSensorSeries } from "@/lib/useSensorSeries";
 import { buildSthOption } from "@/lib/charts/sthOption";
@@ -16,6 +17,8 @@ import {
   aggForPresetSth,
   estimateAggFromDatesSth,
   presetRangeYmd,
+  EXPECTED_SAMPLE_INTERVAL_MINUTES,
+  observedIntervalMinutes,
 } from "@/lib/aggregation";
 import type { SthDevice, RangoSth } from "@/lib/knopTypes";
 import { fmt, formatDateToMinute } from "@/lib/units";
@@ -96,6 +99,10 @@ export function SthReport() {
   const last = series.rows.length ? series.rows[series.rows.length - 1] : null;
   const lastTemp = last?.tempC ?? null;
   const lastHum = last?.hum ?? null;
+  const observedSampleMinutes = useMemo(
+    () => observedIntervalMinutes(series.rows.map((r) => r.t)),
+    [series.rows]
+  );
 
   const tempStatus = statusFromCompliance(lastTemp, tempRange, tempOor.buckets);
   const humStatus = statusFromCompliance(lastHum, humRange, humOor.buckets);
@@ -138,7 +145,9 @@ export function SthReport() {
       <div className="no-print card flex flex-wrap items-end gap-4 p-4">
         <SensorSelect value={selected} onChange={setSelected} options={options} />
         <PresetRow value={series.preset} onSelect={series.setPreset} />
+        <ReportRangeControl value={series.range} onApply={series.applyRange} />
       </div>
+      <BatchPrintPanel kind="sth" devices={devices} query={series.query} currentId={selected} />
 
       <p className="text-sm text-muted">
         <span className="font-semibold text-ink">{sensorLabel}</span> · Periodo: {periodLabel}
@@ -153,6 +162,8 @@ export function SthReport() {
           icon={<Thermometer className="h-4 w-4" />}
           trend={tempTrend}
           sub={`Prom ${fmt(tempStats.avg, 1)} °C`}
+          valueClassName="text-lg font-semibold"
+          subClassName="text-2xl font-extrabold"
         />
         <KpiCard
           label="Humedad"
@@ -161,6 +172,8 @@ export function SthReport() {
           icon={<Droplets className="h-4 w-4" />}
           trend={humTrend}
           sub={`Prom ${fmt(humStats.avg, 1)} %`}
+          valueClassName="text-lg font-semibold"
+          subClassName="text-2xl font-extrabold"
         />
         <KpiCard
           label="T° mín / máx"
@@ -239,6 +252,15 @@ export function SthReport() {
           <InfoRow icon={<Hash className="h-4 w-4" />} label="Identificador" value={meta?.identificador || "—"} />
           <InfoRow icon={<MapPin className="h-4 w-4" />} label="Ubicación" value={meta?.ubicacion || "—"} />
           <InfoRow icon={<Activity className="h-4 w-4" />} label="Tipo de rango" value={rango?.tipo || "—"} />
+          <InfoRow
+            icon={<Activity className="h-4 w-4" />}
+            label="Muestreo"
+            value={
+              observedSampleMinutes == null
+                ? `Objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min · sin datos suficientes`
+                : `${observedSampleMinutes} min observado · objetivo ${EXPECTED_SAMPLE_INTERVAL_MINUTES} min`
+            }
+          />
           <InfoRow icon={<Thermometer className="h-4 w-4" />} label="Rango temperatura" value={tempRange.min != null ? `${tempRange.min}–${tempRange.max} °C` : "—"} />
           <InfoRow icon={<Droplets className="h-4 w-4" />} label="Rango humedad" value={humRange.min != null ? `${humRange.min}–${humRange.max} %` : "—"} />
           <InfoRow
